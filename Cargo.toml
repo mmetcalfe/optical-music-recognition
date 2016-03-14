@@ -1,0 +1,8 @@
+[package]
+name = "optical-music-recognition"
+version = "0.1.0"
+authors = ["Mitchell Metcalfe <mitchell.s.metcalfe@gmail.com>"]
+
+[dependencies]
+ffmpeg-sys = "2.8.6-1"
+libc = "0.2"
