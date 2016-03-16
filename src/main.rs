@@ -1,10 +1,10 @@
 
-pub mod camera;
+pub mod ffmpegcamera;
 
 
 fn main() {
 
-    let cam = camera::Camera::get_default();
+    let camera = ffmpegcamera::FfmpegCamera::get_default();
 
     // println!("Hello, world!");
 }

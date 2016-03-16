@@ -111,11 +111,11 @@ static int decode_packet(int *got_frame, int cached)
         }
     }
 
-    /* If we use frame reference counting, we own the data and need
-     * to de-reference it when we don't use it anymore */
-    // if (*got_frame && refcount)
-    if (*got_frame)
-        av_frame_unref(frame);
+    // /* If we use frame reference counting, we own the data and need
+    //  * to de-reference it when we don't use it anymore */
+    // // if (*got_frame && refcount)
+    // if (*got_frame)
+    //     av_frame_unref(frame);
 
     return decoded;
 }
@@ -190,8 +190,7 @@ int main (int argc, char **argv)
 
     // const char* format_name = "avfoundation";
     AVInputFormat* input_format = av_find_input_format("avfoundation");
-    printf("\n\ninput_format: %p", input_format);
-    printf("\n\ninput_format: %p", input_format);
+    printf("input_format: %p\n", input_format);
     // printf("input_format: %s", input_format->long_name);
 
     AVDictionary* open_options = NULL;
@@ -206,11 +205,26 @@ int main (int argc, char **argv)
         exit(1);
     }
 
+    printf("fmt_ctx: %p\n", fmt_ctx);
+    video_stream = fmt_ctx->streams[0];
+    printf("video_stream: %p\n", video_stream);
+    video_dec_ctx = video_stream->codec;
+    printf("video_dec_ctx: %p\n", video_dec_ctx);
+    /* allocate image where the decoded image will be put */
+    width = video_dec_ctx->width;
+    height = video_dec_ctx->height;
+    pix_fmt = video_dec_ctx->pix_fmt;
+
+    printf("width: %d\n", width);
+    printf("height: %d\n", height);
+    printf("pix_fmt: %d\n", pix_fmt);
+
     /* retrieve stream information */
     if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
         fprintf(stderr, "Could not find stream information\n");
         exit(1);
     }
+
 
     if (open_codec_context(&video_stream_idx, fmt_ctx, AVMEDIA_TYPE_VIDEO) >= 0) {
         video_stream = fmt_ctx->streams[video_stream_idx];
@@ -227,6 +241,9 @@ int main (int argc, char **argv)
         width = video_dec_ctx->width;
         height = video_dec_ctx->height;
         pix_fmt = video_dec_ctx->pix_fmt;
+        printf("width: %d\n", width);
+        printf("height: %d\n", height);
+        printf("pix_fmt: %d\n", pix_fmt);
         ret = av_image_alloc(video_dst_data, video_dst_linesize,
                              width, height, pix_fmt, 1);
         if (ret < 0) {
