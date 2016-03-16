@@ -175,6 +175,49 @@ impl Drop for FfmpegCamera {
     }
 }
 
+unsafe fn frame_yuyv422_to_rgb(frame_yuyv : *const ffmpeg_sys::AVFrame, frame_rgb : *mut ffmpeg_sys::AVFrame) {
+
+    println!("frame_yuyv: {:?}", frame_yuyv);
+    println!("frame_rgb: {:?}", frame_rgb);
+
+    let src_w = (*frame_yuyv).width;
+    let src_h = (*frame_yuyv).height;
+    // let src_format = (*frame_yuyv).format as ffmpeg_sys::AVPixelFormat;
+    let src_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
+    let dst_w = src_w;
+    let dst_h = src_h;
+    let dst_format = ffmpeg_sys::AV_PIX_FMT_RGB24;
+    let flags = ffmpeg_sys::SWS_BILINEAR;
+    let src_filter : *mut ffmpeg_sys::SwsFilter = ptr::null_mut();
+    let dst_filter : *mut ffmpeg_sys::SwsFilter = ptr::null_mut();
+    let param : *const libc::c_double = ptr::null();
+
+    // let src_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(src_format);
+    // let dst_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(dst_format);
+    // println!("src_fmt ({}): {:?}, {:?}", src_format as i32, src_format, src_fmt_name);
+    // println!("dst_fmt ({}): {:?}, {:?}", dst_format as i32, dst_format, cstring_to_str_safe(dst_fmt_name));
+
+    // let img_convert_ctx = ffmpeg_sys::sws_getCachedContext(ptr::null_mut(),
+    let img_convert_ctx = ffmpeg_sys::sws_getContext(
+        src_w, src_h, src_format,
+        dst_w, dst_h, dst_format,
+        flags, src_filter, dst_filter, param
+    );
+
+    // Convert the image from its native format to RGB
+    let src_slice_y = 0;
+    let src_slice_h = src_h;
+    ffmpeg_sys::sws_scale(
+        img_convert_ctx,
+        &((*frame_yuyv).data[0] as *const u8),
+        &(*frame_yuyv).linesize[0],
+        src_slice_y,
+        src_slice_h,
+        &mut (*frame_rgb).data[0],
+        &mut (*frame_rgb).linesize[0],
+    );
+}
+
 impl FfmpegCamera {
     unsafe fn get_default_format_context(frame_dims : (usize, usize)) -> *mut ffmpeg_sys::AVFormatContext {
 
@@ -338,37 +381,38 @@ impl FfmpegCamera {
         (decoder_context, stream_index as isize)
     }
 
-    // unsafe fn allocate_buffers(decoder_context : *mut ffmpeg_sys::AVCodecContext) -> FrameBuffers {
-    unsafe fn allocate_buffers(video_size : (usize, usize)) -> FrameBuffers {
+    unsafe fn allocate_buffers(decoder_context : *mut ffmpeg_sys::AVCodecContext) -> FrameBuffers {
+    // unsafe fn allocate_buffers(video_size : (usize, usize)) -> FrameBuffers {
 
         // av_frame_alloc(), av_frame_unref() and av_frame_free()
         let mut frame_raw = ffmpeg_sys::av_frame_alloc();
-        // let mut frame_rgb = ffmpeg_sys::av_frame_alloc();
+        let mut frame_rgb = ffmpeg_sys::av_frame_alloc();
 
-        if frame_raw.is_null() {
-        // if frame_raw.is_null() || frame_rgb.is_null() {
+        // if frame_raw.is_null() {
+        if frame_raw.is_null() || frame_rgb.is_null() {
             println!("ERROR: av_frame_alloc failure.");
             panic!()
         }
 
-        // let pixel_format = ffmpeg_sys::AV_PIX_FMT_RGB24;
-        // let width = video_size.0 as i32; // (*decoder_context).width;
-        // let height = video_size.1 as i32; // (*decoder_context).height;
-        // // let align = width * 3 * mem::size_of::<u8>() as i32;
-        // println!("pixel_format: {:?}", pixel_format);
-        // println!("width: {}", width);
-        // println!("height: {}", height);
-        // // println!("align: {}", align);
-        // let linesize = 1;
-        // let num_bytes = ffmpeg_sys::av_image_get_buffer_size( // avpicture_get_size(
-        //     pixel_format,
-        //     width,
-        //     height,
-        //     linesize // linesize
-        // );
-        // println!("depth: {}", (num_bytes as f64 / width as f64) / height as f64);
-        // let frame_buffer = ffmpeg_sys::av_malloc(num_bytes as usize * mem::size_of::<u8>());
-        // let picture = frame_rgb as *mut ffmpeg_sys::AVPicture;
+////////////////////
+        let pixel_format = ffmpeg_sys::AV_PIX_FMT_RGB24;
+        let width = (*decoder_context).width;
+        let height = (*decoder_context).height;
+        // let align = width * 3 * mem::size_of::<u8>() as i32;
+        println!("pixel_format: {:?}", pixel_format);
+        println!("width: {}", width);
+        println!("height: {}", height);
+        // println!("align: {}", align);
+        let linesize = 1;
+        let num_bytes = ffmpeg_sys::av_image_get_buffer_size( // avpicture_get_size(
+            pixel_format,
+            width,
+            height,
+            linesize // linesize
+        );
+        println!("depth: {}", (num_bytes as f64 / width as f64) / height as f64);
+        let frame_buffer = ffmpeg_sys::av_malloc(num_bytes as usize * mem::size_of::<u8>());
+        let picture = frame_rgb as *mut ffmpeg_sys::AVPicture;
         // let fill_error = ffmpeg_sys::av_image_fill_arrays( // av_image_fill_arrays
         //     &mut (*picture).data[0],
         //     &mut (*picture).linesize[0],
@@ -378,24 +422,26 @@ impl FfmpegCamera {
         //     height,
         //     linesize
         // );
-        // // let fill_error = ffmpeg_sys::avpicture_fill( // av_image_fill_arrays
-        // //     frame_rgb as *mut ffmpeg_sys::AVPicture,
-        // //     frame_buffer as *const u8,
-        // //     pixel_format,
-        // //     width,
-        // //     height
-        // // );
-        //
-        // if fill_error < 0 {
-        //     log_av_error("fill_error", fill_error);
-        //     panic!()
-        // }
+        let fill_error = ffmpeg_sys::avpicture_fill( // av_image_fill_arrays
+            frame_rgb as *mut ffmpeg_sys::AVPicture,
+            frame_buffer as *const u8,
+            pixel_format,
+            width,
+            height
+        );
+
+        if fill_error < 0 {
+            log_av_error("fill_error", fill_error);
+            panic!()
+        }
+////////////////////
+
 
         FrameBuffers {
             // frame_buffer: frame_buffer  as *mut u8,
             frame_buffer: ptr::null_mut(),
             frame_raw: frame_raw,
-            frame_rgb: ptr::null_mut(),
+            frame_rgb: frame_rgb, // ptr::null_mut(),
             // frame_rgb: frame_rgb,
         }
     }
@@ -443,59 +489,42 @@ impl FfmpegCamera {
                 let video_dst_data : *mut *mut u8 = self.video_dst_data_vec.as_mut_ptr();
                 let mut video_dst_linesize : *mut libc::c_int = self.video_dst_linesize_vec.as_mut_ptr();
 
-                /* copy decoded frame to destination buffer:
-                 * this is required since rawvideo expects non aligned data */
-                ffmpeg_sys::av_image_copy(
-                    video_dst_data,
-                    video_dst_linesize,
-                    (&(*self.buffers.frame_raw).data as *const _) as *const *const u8,
-                    &(*self.buffers.frame_raw).linesize as *const i32,
-                    pix_fmt,
-                    width,
-                    height
-                );
+                // /* copy decoded frame to destination buffer:
+                //  * this is required since rawvideo expects non aligned data */
+                // ffmpeg_sys::av_image_copy(
+                //     video_dst_data,
+                //     video_dst_linesize,
+                //     (&(*self.buffers.frame_raw).data as *const _) as *const *const u8,
+                //     &(*self.buffers.frame_raw).linesize as *const i32,
+                //     pix_fmt,
+                //     width,
+                //     height
+                // );
+                // // Save the image:
+                // pgm_save(
+                //     self.video_dst_data_vec[0] as *const u8,
+                //     width as usize,
+                //     height as usize,
+                //     self.video_dst_linesize_vec[0] as usize,
+                //     "test.pgm"
+                // );
+
+
+                let picture_save = self.buffers.frame_rgb;
+                frame_yuyv422_to_rgb(self.buffers.frame_raw, picture_save);
 
                 // Save the image:
-                pgm_save(
-                    self.video_dst_data_vec[0] as *const u8,
-                    width as usize,
-                    height as usize,
-                    self.video_dst_linesize_vec[0] as usize,
-                    "test.pgm"
-                );
-
-                // // Convert the image from its native format to RGB
-                // let src_slice_y = 0;
-                // // let src_slice_h = 0; // (*self.decoder_context).height;
-                // let src_slice_h = height; //(*self.decoder_context).height;
-                // println!("  src_slice_h: {}", src_slice_h);
-                // // let picture_raw = self.buffers.frame_raw as *const ffmpeg_sys::AVPicture;
-                // // let picture_rgb = self.buffers.frame_rgb as *mut ffmpeg_sys::AVPicture;
-                // let picture_raw = self.buffers.frame_raw;
-                // // let picture_rgb = self.buffers.frame_rgb;
-                // // ffmpeg_sys::sws_scale(
-                // //     img_convert_ctx,
-                // //     &((*picture_raw).data[0] as *const u8),
-                // //     &(*picture_raw).linesize[0],
-                // //     src_slice_y,
-                // //     src_slice_h,
-                // //     &mut (*picture_rgb).data[0],
-                // //     &mut (*picture_rgb).linesize[0],
-                // // );
-
-                // Save the image:
-                // let picture_save = picture_raw;
                 // println!("(*picture_save).data[0] as *const u8: {:?}", (*picture_save).data[0] as *const u8);
                 // println!("width as usize: {:?}", width as usize);
                 // println!("height as usize: {:?}", height as usize);
                 // println!("(*picture_save).linesize[0] as usize: {:?}", (*picture_save).linesize[0] as usize);
-                // pgm_save(
-                //     ((*picture_save).data[0] as *const u8),
-                //     width as usize,
-                //     height as usize,
-                //     (*picture_save).linesize[0] as usize,
-                //     "test.pgm"
-                // );
+                pgm_save(
+                    ((*picture_save).data[0] as *const u8),
+                    width as usize,
+                    height as usize,
+                    (*picture_save).linesize[0] as usize,
+                    "test.pgm"
+                );
             }
         } else {
             println!("Bad frame");
@@ -505,34 +534,7 @@ impl FfmpegCamera {
     }
 
     unsafe fn get_next_frame(&mut self) {
-        // let width = self.video_size.0 as i32; //(*decoder_context).width;
-        // let height = self.video_size.1 as i32; //(*decoder_context).height;
-        // let src_w = width;
-        // let src_h = height;
-        // let src_format = ffmpeg_sys::AV_PIX_FMT_UYVY422; // (*self.decoder_context).pix_fmt;
-        // let dst_w = width;
-        // let dst_h = height;
-        // let dst_format = ffmpeg_sys::AV_PIX_FMT_RGB24;
-        // let flags = ffmpeg_sys::SWS_BILINEAR;
-        // let src_filter : *mut ffmpeg_sys::SwsFilter = ptr::null_mut();
-        // let dst_filter : *mut ffmpeg_sys::SwsFilter = ptr::null_mut();
-        // let param : *const libc::c_double = ptr::null();
-        //
-        // let src_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(src_format);
-        // let dst_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(dst_format);
-        // println!("src_fmt ({}): {:?}, {:?}", src_format as i32, src_format, src_fmt_name);
-        // println!("dst_fmt ({}): {:?}, {:?}", dst_format as i32, dst_format, cstring_to_str_safe(dst_fmt_name));
-        //
-        // // let img_convert_ctx = ffmpeg_sys::sws_getCachedContext(ptr::null_mut(),
-        // let img_convert_ctx = ffmpeg_sys::sws_getContext(
-        //     src_w, src_h, src_format,
-        //     dst_w, dst_h, dst_format,
-        //     flags, src_filter, dst_filter, param
-        // );
-
-        // Note: using mem::uninitialized() on a stack allocated packet led to weird behaviour.
-        println!("sizeof(ffmpeg_sys::AVPacket): {:?}", mem::size_of::<ffmpeg_sys::AVPacket>());
-        // let mut packet_box : Box<ffmpeg_sys::AVPacket> = Box::new(mem::uninitialized());
+        // println!("sizeof(ffmpeg_sys::AVPacket): {:?}", mem::size_of::<ffmpeg_sys::AVPacket>());
         let mut packet_vec: Vec<u8> = Vec::with_capacity(mem::size_of::<ffmpeg_sys::AVPacket>());
         let mut packet : *mut ffmpeg_sys::AVPacket = packet_vec.as_mut_ptr() as *mut ffmpeg_sys::AVPacket;
         // let mut packet : *mut ffmpeg_sys::AVPacket = libc::calloc(1, mem::size_of::<ffmpeg_sys::AVPacket>()) as *mut ffmpeg_sys::AVPacket;
@@ -685,8 +687,8 @@ impl FfmpegCamera {
             camera.decoder_context = decoder_context;
             camera.stream_index = stream_index as usize;
 
-            // camera.buffers = Self::allocate_buffers(decoder_context);
-            camera.buffers = Self::allocate_buffers(video_size);
+            camera.buffers = Self::allocate_buffers(decoder_context);
+            // camera.buffers = Self::allocate_buffers(video_size);
 
             camera.get_next_frame();
 
