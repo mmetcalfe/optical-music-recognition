@@ -6,108 +6,12 @@ use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::c_char;
 
-use std::str::*;
-
 use image_ycbcr; // ::Image;
 
 use std::error;
 
-// Define an error type for FFmpeg:
-use std::fmt; // ::{Debug, Display};
-#[derive(Debug)]
-pub struct FfmpegError {
-    errnum : libc::c_int,
-    message : String,
-}
-impl fmt::Display for FfmpegError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{FfmpegError ({}): {}}}", self.errnum, self.message)
-    }
-}
-impl error::Error for FfmpegError {
-    fn description(&self) -> &str {
-        &self.message
-    }
-}
-impl FfmpegError {
-    pub fn from_av_error(errnum : libc::c_int) -> FfmpegError {
-        FfmpegError {
-            errnum: errnum,
-            message: av_error_string(errnum),
-        }
-    }
-
-    pub fn from_message(message : &str) -> FfmpegError {
-        FfmpegError {
-            errnum: 0,
-            message: String::from_str(message).unwrap(),
-        }
-    }
-}
-
-// From: https://doc.rust-lang.org/std/ffi/struct.CStr.html
-pub fn cstring_to_str_safe(c_string : *const c_char) -> String {
-    unsafe {
-        CStr::from_ptr(c_string).to_string_lossy().into_owned()
-    }
-}
-
-fn av_error_string(errnum : libc::c_int) -> String {
-    let errbuf_size = 256;
-    let errbuff = CString::new(vec!(' ' as u8; errbuf_size)).unwrap();
-    let modified_buff : CString;
-
-    unsafe {
-        let errbuff_ptr = errbuff.into_raw();
-        ffmpeg_sys::av_strerror(errnum, errbuff_ptr, errbuf_size);
-        modified_buff = CString::from_raw(errbuff_ptr);
-    }
-
-    modified_buff.to_string_lossy().into_owned()
-}
-
-pub fn log_av_error(operation : &str, errnum : libc::c_int) {
-    println!("{}, AVERROR ({}): {}.", operation, errnum, av_error_string(errnum));
-}
-
-pub fn av_dict_string(dict : *const ffmpeg_sys::AVDictionary) -> String {
-    let result_string : String;
-
-    unsafe {
-        let mut dict_buff : *mut c_char = ptr::null_mut();
-
-        let err = ffmpeg_sys::av_dict_get_string(dict, &mut dict_buff, ':' as i8, ',' as i8);
-        if err < 0 {
-            log_av_error("av_dict_string", err)
-        }
-
-        // Note: Having rust take ownership of the buffer is leading to memory corruption.
-        // modified_buff = CStr::from_raw(dict_buff);
-        // result_string = modified_buff.to_string_lossy().into_owned()
-
-        // Copy the buffer into a String:
-        result_string = cstring_to_str_safe(dict_buff);
-
-        // Free the buffer:
-        ffmpeg_sys::av_free(dict_buff as *mut libc::c_void);
-    }
-
-    result_string
-}
-
-pub unsafe fn create_av_dict(entries : Vec<(&str, &str, libc::c_int)>) -> *mut ffmpeg_sys::AVDictionary {
-    let mut dict : *mut ffmpeg_sys::AVDictionary = ptr::null_mut();
-
-    for entry in entries {
-        let opt_key = CString::new(entry.0).unwrap();
-        let opt_val = CString::new(entry.1).unwrap();
-        let opt_flags = entry.2;
-        ffmpeg_sys::av_dict_set(&mut dict, opt_key.as_ptr(), opt_val.as_ptr(), opt_flags);
-    }
-
-    dict
-}
-
+use ffmpeg_utils;
+use ffmpeg_utils::FfmpegError;
 
 pub struct FfmpegCamera {
     stream_index : usize,
@@ -138,7 +42,7 @@ impl FfmpegCamera {
         let format_name = CString::new("avfoundation").unwrap();
         let input_format = ffmpeg_sys::av_find_input_format(format_name.as_ptr());
         println!("input_format: {:?}", input_format);
-        println!("input_format: {:?}", cstring_to_str_safe((*input_format).long_name));
+        println!("input_format: {:?}", ffmpeg_utils::cstring_to_str_safe((*input_format).long_name));
 
         // Note the trailing ':' (avfoundation input filename format is "[[VIDEO]:[AUDIO]]").
         // Note: avdevice_list_input_sources is not implemented for avfoundation.
@@ -148,7 +52,7 @@ impl FfmpegCamera {
 
         let video_size_str = format!("{}x{}", frame_dims.0, frame_dims.1);
         let device_filename = CString::new(device_filename_str).unwrap();
-        let mut open_options = create_av_dict(vec!(
+        let mut open_options = ffmpeg_utils::create_av_dict(vec!(
             // ("list_devices", "1", 0),
             // ("video_device_index", "0", 0),
             // ("audio_device_index", "0", 0),
@@ -162,7 +66,7 @@ impl FfmpegCamera {
             // ("capture_mouse_clicks", "1", 0),
         ));
         println!("device_filename: {:?}", device_filename);
-        println!("open_options: {}", av_dict_string(open_options));
+        println!("open_options: {}", ffmpeg_utils::av_dict_string(open_options));
 
         // let mut format_context = ffmpeg_sys::avformat_alloc_context();
         let mut format_context : *mut ffmpeg_sys::AVFormatContext = ptr::null_mut();
@@ -181,13 +85,13 @@ impl FfmpegCamera {
         let num_rejected_options = ffmpeg_sys::av_dict_count(&*open_options);
         if num_rejected_options > 0 {
             println!("num rejected open_options: {}", num_rejected_options);
-            println!("rejected open_options: {}", av_dict_string(open_options));
+            println!("rejected open_options: {}", ffmpeg_utils::av_dict_string(open_options));
         }
 
         ffmpeg_sys::av_dict_free(&mut open_options);
 
         if open_error < 0 {
-            log_av_error("open_error", open_error);
+            ffmpeg_utils::log_av_error("open_error", open_error);
             return Err(FfmpegError::from_av_error(open_error));
         }
 
@@ -195,7 +99,7 @@ impl FfmpegCamera {
         let stream_info_error = ffmpeg_sys::avformat_find_stream_info(format_context, info_options);
 
         if stream_info_error < 0 {
-            log_av_error("stream_info_error", stream_info_error);
+            ffmpeg_utils::log_av_error("stream_info_error", stream_info_error);
             return Err(FfmpegError::from_av_error(stream_info_error));
         }
 
@@ -208,28 +112,28 @@ impl FfmpegCamera {
 
         let decoder = ffmpeg_sys::avcodec_find_decoder((*decoder_context).codec_id);
         if decoder.is_null() {
-            // let type_str = cstring_to_str_safe(ffmpeg_sys::av_get_media_type_string(kind));
+            // let type_str = ffmpeg_utils::cstring_to_str_safe(ffmpeg_sys::av_get_media_type_string(kind));
             // let message = format!("avcodec_find_decoder: decoder not found for {}.", type_str);
             let message = "avcodec_find_decoder: decoder not found.";
             println!("{}", message);
             return Err(FfmpegError::from_message(message));
         }
 
-        println!("decoder.long_name: {:?}", cstring_to_str_safe((*decoder).long_name));
+        println!("decoder.long_name: {:?}", ffmpeg_utils::cstring_to_str_safe((*decoder).long_name));
 
         // Initialize the decoder:
         // let mut codec_options = ptr::null_mut();
-        let mut codec_options = create_av_dict(vec!(
+        let mut codec_options = ffmpeg_utils::create_av_dict(vec!(
             ("refcounted_frames", "0", 0),
         ));
-        // println!("codec_options: {}", av_dict_string(codec_options));
+        // println!("codec_options: {}", ffmpeg_utils::av_dict_string(codec_options));
         let decoder_open_error = ffmpeg_sys::avcodec_open2(decoder_context, decoder, &mut codec_options);
-        // println!("rejected codec_options: {}", av_dict_string(codec_options));
+        // println!("rejected codec_options: {}", ffmpeg_utils::av_dict_string(codec_options));
         if decoder_open_error < 0 {
-            // let type_str = cstring_to_str_safe(ffmpeg_sys::av_get_media_type_string(kind));
+            // let type_str = ffmpeg_utils::cstring_to_str_safe(ffmpeg_sys::av_get_media_type_string(kind));
             // println!("avcodec_find_decoder: failed to open {} codec.", type_str);
             println!("avcodec_find_decoder: failed to open codec.");
-            log_av_error("decoder_open_error", decoder_open_error);
+            ffmpeg_utils::log_av_error("decoder_open_error", decoder_open_error);
             return Err(FfmpegError::from_av_error(decoder_open_error));
         }
 
@@ -251,7 +155,7 @@ impl FfmpegCamera {
             );
 
             if decode_error < 0 {
-                log_av_error("decode_error", decode_error);
+                ffmpeg_utils::log_av_error("decode_error", decode_error);
                 *got_frame = 0; // got_frame is undefined if avcodec_decode_video2 returns an error.
                 return Err(FfmpegError::from_av_error(decode_error));
             }
@@ -299,12 +203,12 @@ impl FfmpegCamera {
             if read_error >= 0 {
                 let decode_result = self.decode_packet(packet, &mut got_frame, 0);
                 if decode_result.is_err() {
-                    // log_av_error("read_next_frame, decode_packet", decoded_size);
+                    // ffmpeg_utils::log_av_error("read_next_frame, decode_packet", decoded_size);
                     result = decode_result; //Err(FfmpegError::from_av_error(decoded_size))
                     break;
                 }
             } else {
-                log_av_error("read_next_frame, av_read_frame", read_error);
+                ffmpeg_utils::log_av_error("read_next_frame, av_read_frame", read_error);
                 result = Err(FfmpegError::from_av_error(read_error));
                 break;
             }
@@ -358,7 +262,7 @@ impl FfmpegCamera {
                 println!("bytes_written > num_bytes : {} > {}", bytes_written, num_bytes);
                 panic!("get_image, av_image_get_buffer_size: Data buffer overrun.");
             } else if bytes_written < 0 {
-                log_av_error("get_image, av_image_copy_to_buffer", bytes_written);
+                ffmpeg_utils::log_av_error("get_image, av_image_copy_to_buffer", bytes_written);
                 return Err(FfmpegError::from_av_error(bytes_written))
             }
         }
@@ -406,7 +310,7 @@ impl FfmpegCamera {
                 flags
             );
             if stream_index < 0 {
-                let type_str = cstring_to_str_safe(ffmpeg_sys::av_get_media_type_string(kind));
+                let type_str = ffmpeg_utils::cstring_to_str_safe(ffmpeg_sys::av_get_media_type_string(kind));
                 println!("av_find_best_stream: Could not find {} stream in input file.", type_str);
                 return Err(FfmpegError::from_av_error(stream_index));
             }
