@@ -8,9 +8,21 @@ use std::ffi::CString;
 
 use std::str::*;
 
-// Define an error type for FFmpeg:
 use std::error;
-use std::fmt; // ::{Debug, Display};
+use std::fmt;
+
+pub fn make_uninitialised_vec<T>(length : usize) -> Vec<T> {
+    // See: https://doc.rust-lang.org/std/vec/struct.Vec.html#method.from_raw_parts
+    let mut tmp_data = Vec::<T>::with_capacity(length);
+    let data_ptr = tmp_data.as_mut_ptr();
+    unsafe {
+        mem::forget(tmp_data); // Don't run tmp_data's destructor.
+        // Create a full vector of uninitialised values:
+        Vec::from_raw_parts(data_ptr, length, length)
+    }
+}
+
+// Define an error type for FFmpeg:
 #[derive(Debug)]
 pub struct FfmpegError {
     errnum : libc::c_int,

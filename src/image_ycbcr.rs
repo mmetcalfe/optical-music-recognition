@@ -1,9 +1,11 @@
 
 // use std::ops;
 
-// use std::io::prelude::*;
+// use std::cmp;
+use std::io;
+use std::io::prelude::*;
 // use std::fs::File;
-// use std::fs::OpenOptions;
+use std::fs::OpenOptions;
 
 extern crate ffmpeg_sys;
 extern crate libc;
@@ -24,7 +26,8 @@ pub struct Image {
 
 impl Image {
 
-    pub fn index(&self, row : usize, col : usize) -> Pixel {
+    pub fn index(&self, col : usize, row : usize) -> Pixel {
+        // u y v y u y v y ...
         let row_offset = row * self.width * 2;
         let y_i = row_offset + col*2 + 1;
         // let uv_offset = ((col*2) / 4) * 4;
@@ -39,6 +42,11 @@ impl Image {
                 cr: *self.data.get_unchecked(v_i),
             }
         }
+        // Pixel {
+        //     y: self.data[y_i],
+        //     cb: self.data[u_i],
+        //     cr: self.data[v_i],
+        // }
     }
 
     // Based on: https://lists.libav.org/pipermail/libav-user/2010-August/005159.html
@@ -50,6 +58,27 @@ impl Image {
         }
 
         Ok(())
+    }
+
+    pub fn save_pgm(&self, save_fname: &str) -> io::Result<()> {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(save_fname)
+            .unwrap();
+        try!(write!(file, "P6\n{} {}\n{}\n", self.width, self.height, 255));
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let px = self.index(x, y);
+                try!(file.write(&[px.y]));
+                try!(file.write(&[px.cb]));
+                try!(file.write(&[px.cr]));
+            }
+        }
+        try!(writeln!(file, ""));
+        Ok(())
+        //     // libc::fwrite(buffer.offset((i * stride) as isize) as *const libc::c_void, 1, img_w*3, f);
     }
 
     // pub fn index(&self, row : usize, col : usize) -> Pixel {

@@ -9,5 +9,6 @@ fn main() {
 
     let image = camera.get_image().unwrap();
 
-    image.save_jpeg("another.jpg").unwrap();
+    image.save_pgm("image.pgm").unwrap();
+    image.save_jpeg("image.jpg").unwrap();
 }

@@ -237,7 +237,7 @@ impl FfmpegCamera {
             );
 
             // Create the buffer:
-            data = Vec::with_capacity(num_bytes as usize);
+            data = ffmpeg_utils::make_uninitialised_vec(num_bytes as usize);
 
             // Copy raw frame to the buffer:
             let dst_size = num_bytes;
