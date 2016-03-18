@@ -7,12 +7,8 @@
 
 extern crate ffmpeg_sys;
 extern crate libc;
-use ffmpeg_camera;
 use ffmpeg_utils;
 use ffmpeg_utils::FfmpegError;
-use std::ptr;
-use std::mem;
-use std::ffi::CString;
 
 pub struct Pixel {
     pub y : u8,

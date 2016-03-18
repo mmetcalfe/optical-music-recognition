@@ -9,7 +9,5 @@ fn main() {
 
     let image = camera.get_image().unwrap();
 
-    unsafe {
-        image.save_jpeg("another.jpg");
-    }
+    image.save_jpeg("another.jpg").unwrap();
 }

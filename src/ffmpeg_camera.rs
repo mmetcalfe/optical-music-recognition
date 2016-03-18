@@ -2,13 +2,9 @@ extern crate ffmpeg_sys;
 extern crate libc;
 use std::ptr;
 use std::mem;
-use std::ffi::CStr;
 use std::ffi::CString;
-use std::os::raw::c_char;
 
 use image_ycbcr; // ::Image;
-
-use std::error;
 
 use ffmpeg_utils;
 use ffmpeg_utils::FfmpegError;
@@ -24,13 +20,13 @@ impl Drop for FfmpegCamera {
     fn drop(&mut self) {
         unsafe {
             ffmpeg_sys::avcodec_close(self.decoder_context);
-            println!("FfmpegCamera::drop, Codec closed.");
+            // println!("FfmpegCamera::drop, Codec closed.");
 
             ffmpeg_sys::avformat_close_input(&mut self.format_context);
-            println!("FfmpegCamera::drop, Input closed.");
+            // println!("FfmpegCamera::drop, Input closed.");
 
             ffmpeg_sys::av_frame_free(&mut self.frame_raw);
-            println!("FfmpegCamera::drop, Buffers freed.");
+            // println!("FfmpegCamera::drop, Buffers freed.");
         }
     }
 }
@@ -140,10 +136,10 @@ impl FfmpegCamera {
         Ok(decoder_context)
     }
 
-    unsafe fn decode_packet(&mut self, packet : *mut ffmpeg_sys::AVPacket, got_frame : *mut i32, cached : i32) -> Result<(), FfmpegError> {
+    unsafe fn decode_packet(&mut self, packet : *mut ffmpeg_sys::AVPacket, got_frame : *mut i32) -> Result<(), FfmpegError> {
         // Is this a packet from the video stream?
         if (*packet).stream_index == self.stream_index as i32 {
-            println!("av_read_frame: packet.buff {:?}, cached: {}", (*packet).buf, cached);
+            // println!("av_read_frame: packet.buff {:?}, cached: {}", (*packet).buf, cached);
 
             // Decode video frame
             let decode_error = ffmpeg_sys::avcodec_decode_video2(
@@ -161,7 +157,7 @@ impl FfmpegCamera {
             }
 
             if *got_frame != 0 {
-                println!("  Read success");
+                // println!("  Read success");
 
                 let width = (*self.decoder_context).width;
                 let height = (*self.decoder_context).height;
@@ -179,7 +175,7 @@ impl FfmpegCamera {
                 }
             }
         } else {
-            println!("Bad frame");
+            println!("BAD FRAME!");
         }
 
         Ok(())
@@ -201,7 +197,7 @@ impl FfmpegCamera {
         while got_frame == 0 {
             let read_error = ffmpeg_sys::av_read_frame(self.format_context, packet);
             if read_error >= 0 {
-                let decode_result = self.decode_packet(packet, &mut got_frame, 0);
+                let decode_result = self.decode_packet(packet, &mut got_frame);
                 if decode_result.is_err() {
                     // ffmpeg_utils::log_av_error("read_next_frame, decode_packet", decoded_size);
                     result = decode_result; //Err(FfmpegError::from_av_error(decoded_size))

@@ -111,8 +111,8 @@ pub unsafe fn frame_uyvy422_to_yuvj420p(frame_uyvy422 : *const ffmpeg_sys::AVFra
     let src_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
     let dst_format = ffmpeg_sys::AV_PIX_FMT_YUVJ420P;
 
-    println!("frame_uyvy: {:?}", frame_uyvy422);
-    println!("frame_yuvj420p: {:?}", frame_yuvj420p);
+    // println!("frame_uyvy: {:?}", frame_uyvy422);
+    // println!("frame_yuvj420p: {:?}", frame_yuvj420p);
 
     let src_w = (*frame_uyvy422).width;
     let src_h = (*frame_uyvy422).height;
@@ -125,10 +125,10 @@ pub unsafe fn frame_uyvy422_to_yuvj420p(frame_uyvy422 : *const ffmpeg_sys::AVFra
     let dst_filter : *mut ffmpeg_sys::SwsFilter = ptr::null_mut();
     let param : *const libc::c_double = ptr::null();
 
-    let src_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(src_format);
-    let dst_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(dst_format);
-    println!("src_fmt ({}): {:?}, {:?}", src_format as i32, src_format, src_fmt_name);
-    println!("dst_fmt ({}): {:?}, {:?}", dst_format as i32, dst_format, cstring_to_str_safe(dst_fmt_name));
+    // let src_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(src_format);
+    // let dst_fmt_name = ffmpeg_sys::av_get_pix_fmt_name(dst_format);
+    // println!("src_fmt ({}): {:?}, {:?}", src_format as i32, src_format, src_fmt_name);
+    // println!("dst_fmt ({}): {:?}, {:?}", dst_format as i32, dst_format, cstring_to_str_safe(dst_fmt_name));
 
     // let img_convert_ctx = ffmpeg_sys::sws_getCachedContext(ptr::null_mut(),
     let img_convert_ctx = ffmpeg_sys::sws_getContext(
@@ -171,7 +171,7 @@ pub unsafe fn make_empty_yuv420p_frame(width : usize, height : usize) -> Result<
     // (*yuv420p_frame).quality = (*jpeg_context).global_quality;
 
     // let align = width * 3 * mem::size_of::<u8>() as i32;
-    println!("pixel_format: {:?}", pixel_format);
+    // println!("pixel_format: {:?}", pixel_format);
     let align = 1; // width*2;
     let fill_error = ffmpeg_sys::av_image_alloc( // av_image_fill_arrays
         &mut (*yuv420p_frame).data[0],
@@ -182,8 +182,8 @@ pub unsafe fn make_empty_yuv420p_frame(width : usize, height : usize) -> Result<
         align
     );
 
-    println!("(*yuv420p_frame).data: {:?}", (*yuv420p_frame).data);
-    println!("(*yuv420p_frame).linesize: {:?}", (*yuv420p_frame).linesize);
+    // println!("(*yuv420p_frame).data: {:?}", (*yuv420p_frame).data);
+    // println!("(*yuv420p_frame).linesize: {:?}", (*yuv420p_frame).linesize);
 
     if fill_error < 0 {
         log_av_error("fill_error", fill_error);
@@ -212,7 +212,7 @@ pub unsafe fn make_avframe(width : usize, height : usize, data : &Vec<u8>) -> Re
     // (*yuyv_frame).quality = (*jpeg_context).global_quality;
 
     // let align = width * 3 * mem::size_of::<u8>() as i32;
-    println!("pixel_format: {:?}", pixel_format);
+    // println!("pixel_format: {:?}", pixel_format);
     let align = 1; // self.width*2;
     let fill_error = ffmpeg_sys::av_image_fill_arrays( // av_image_fill_arrays
         &mut (*yuyv_frame).data[0],
@@ -223,12 +223,12 @@ pub unsafe fn make_avframe(width : usize, height : usize, data : &Vec<u8>) -> Re
         height as i32,
         align
     );
-    println!("(*yuyv_frame).data: {:?}", (*yuyv_frame).data);
+    // println!("(*yuyv_frame).data: {:?}", (*yuyv_frame).data);
 
     (*yuyv_frame).data[0] = data.as_ptr() as *mut u8;
 
-    println!("(*yuyv_frame).data: {:?}", (*yuyv_frame).data);
-    println!("(*yuyv_frame).linesize: {:?}", (*yuyv_frame).linesize);
+    // println!("(*yuyv_frame).data: {:?}", (*yuyv_frame).data);
+    // println!("(*yuyv_frame).linesize: {:?}", (*yuyv_frame).linesize);
 
     if fill_error < 0 {
         log_av_error("fill_error", fill_error);
@@ -239,7 +239,7 @@ pub unsafe fn make_avframe(width : usize, height : usize, data : &Vec<u8>) -> Re
 }
 
 pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFrame, save_fname : &str) -> Result<(), FfmpegError> {
-    let input_pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
+    // let input_pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
     let output_pixel_format = ffmpeg_sys::AV_PIX_FMT_YUVJ420P;
 
     let width = (*yuyv422_frame).width as usize;
@@ -251,7 +251,7 @@ pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFram
     if jpeg_encoder.is_null() {
         return Err(FfmpegError::from_message("avcodec_find_encoder: encoder not found."));
     }
-    println!("jpeg_encoder.long_name: {:?}", cstring_to_str_safe((*jpeg_encoder).long_name));
+    // println!("jpeg_encoder.long_name: {:?}", cstring_to_str_safe((*jpeg_encoder).long_name));
 
     // Allocate an encoder context:
     let mut jpeg_context = ffmpeg_sys::avcodec_alloc_context3(jpeg_encoder);
@@ -296,7 +296,7 @@ pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFram
     let mut yuv420p_frame = try!(make_empty_yuv420p_frame(width, height));
     frame_uyvy422_to_yuvj420p(yuyv422_frame, yuv420p_frame);
 
-    println!("Initialise the output packet");
+    // println!("Initialise the output packet");
 
     // Initialise the output packet
     let mut jpeg_packet_vec: Vec<u8> = Vec::with_capacity(mem::size_of::<ffmpeg_sys::AVPacket>());
@@ -305,7 +305,7 @@ pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFram
     (*jpeg_packet).data = ptr::null_mut();
     (*jpeg_packet).size = 0;
 
-    println!("Encode the frame");
+    // println!("Encode the frame");
 
     // Encode the frame:
     let mut got_packet = 0;
@@ -325,7 +325,7 @@ pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFram
         return Err(FfmpegError::from_message("ERROR: encoded packet is empty."));
     }
 
-    println!("Save frame");
+    // println!("Save frame");
     {
         let data_ptr = (*jpeg_packet).data;
         let data_size = (*jpeg_packet).size as usize;
@@ -336,7 +336,7 @@ pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFram
         libc::fclose(f);
     }
 
-    println!("Free resources");
+    // println!("Free resources");
     ffmpeg_sys::av_freep((&(*yuv420p_frame).data[0] as *const _) as *mut libc::c_void);
     ffmpeg_sys::av_frame_free(&mut yuv420p_frame);
 
