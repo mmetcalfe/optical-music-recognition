@@ -30,14 +30,14 @@ impl error::Error for FfmpegError {
     }
 }
 impl FfmpegError {
-    fn from_av_error(errnum : libc::c_int) -> FfmpegError {
+    pub fn from_av_error(errnum : libc::c_int) -> FfmpegError {
         FfmpegError {
             errnum: errnum,
             message: av_error_string(errnum),
         }
     }
 
-    fn from_message(message : &str) -> FfmpegError {
+    pub fn from_message(message : &str) -> FfmpegError {
         FfmpegError {
             errnum: 0,
             message: String::from_str(message).unwrap(),
@@ -46,7 +46,7 @@ impl FfmpegError {
 }
 
 // From: https://doc.rust-lang.org/std/ffi/struct.CStr.html
-fn cstring_to_str_safe(c_string : *const c_char) -> String {
+pub fn cstring_to_str_safe(c_string : *const c_char) -> String {
     unsafe {
         CStr::from_ptr(c_string).to_string_lossy().into_owned()
     }
@@ -66,11 +66,11 @@ fn av_error_string(errnum : libc::c_int) -> String {
     modified_buff.to_string_lossy().into_owned()
 }
 
-fn log_av_error(operation : &str, errnum : libc::c_int) {
+pub fn log_av_error(operation : &str, errnum : libc::c_int) {
     println!("{}, AVERROR ({}): {}.", operation, errnum, av_error_string(errnum));
 }
 
-fn av_dict_string(dict : *const ffmpeg_sys::AVDictionary) -> String {
+pub fn av_dict_string(dict : *const ffmpeg_sys::AVDictionary) -> String {
     let result_string : String;
 
     unsafe {
@@ -95,7 +95,7 @@ fn av_dict_string(dict : *const ffmpeg_sys::AVDictionary) -> String {
     result_string
 }
 
-unsafe fn create_av_dict(entries : Vec<(&str, &str, libc::c_int)>) -> *mut ffmpeg_sys::AVDictionary {
+pub unsafe fn create_av_dict(entries : Vec<(&str, &str, libc::c_int)>) -> *mut ffmpeg_sys::AVDictionary {
     let mut dict : *mut ffmpeg_sys::AVDictionary = ptr::null_mut();
 
     for entry in entries {
@@ -252,6 +252,7 @@ impl FfmpegCamera {
 
             if decode_error < 0 {
                 log_av_error("decode_error", decode_error);
+                *got_frame = 0; // got_frame is undefined if avcodec_decode_video2 returns an error.
                 return Err(FfmpegError::from_av_error(decode_error));
             }
 
@@ -354,7 +355,8 @@ impl FfmpegCamera {
             );
 
             if bytes_written > num_bytes {
-                panic!("get_image, av_image_get_buffer_size: Too many bytes written to data buffer.");
+                println!("bytes_written > num_bytes : {} > {}", bytes_written, num_bytes);
+                panic!("get_image, av_image_get_buffer_size: Data buffer overrun.");
             } else if bytes_written < 0 {
                 log_av_error("get_image, av_image_copy_to_buffer", bytes_written);
                 return Err(FfmpegError::from_av_error(bytes_written))
@@ -387,7 +389,7 @@ impl FfmpegCamera {
             ffmpeg_sys::avdevice_register_all();
             ffmpeg_sys::av_register_all();
 
-            let format_context = Self::get_default_format_context(video_filename, video_size).unwrap();
+            let format_context = try!(Self::get_default_format_context(video_filename, video_size));
 
             // Find the best stream:
             let kind = ffmpeg_sys::AVMEDIA_TYPE_VIDEO;
@@ -410,7 +412,7 @@ impl FfmpegCamera {
             }
             println!("av_find_best_stream: stream_index: {:?}", stream_index);
 
-            let decoder_context = Self::get_codec_context(format_context, stream_index as isize).unwrap();
+            let decoder_context = try!(Self::get_codec_context(format_context, stream_index as isize));
 
             println!("av_dump_format");
             let index = 0;

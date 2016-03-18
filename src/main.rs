@@ -10,8 +10,9 @@ fn main() {
     camera.get_image().unwrap();
     camera.get_image().unwrap();
     camera.get_image().unwrap();
-    camera.get_image().unwrap();
+    let image = camera.get_image().unwrap();
 
-
-    // println!("Hello, world!");
+    unsafe {
+        image.save_jpeg("another.jpg");
+    }
 }
