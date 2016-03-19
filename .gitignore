@@ -4,3 +4,8 @@ target
 # Images
 *.pgm
 *.jpg
+
+# Elm
+/web/elm-stuff/
+/web/LinearAlgebra
+/web/elm.js
