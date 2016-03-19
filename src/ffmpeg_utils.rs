@@ -297,6 +297,10 @@ pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFram
         return Err(FfmpegError::from_av_error(encoder_open_error));
     }
 
+    // Set quality:
+    (*jpeg_context).qmin = 1; // high -- low <==> 1 -- 31
+    (*jpeg_context).qmax = 1; // high -- low <==> 1 -- 31
+
     (*jpeg_context).lmin = (*jpeg_context).qmin * ffmpeg_sys::FF_QP2LAMBDA;
     (*jpeg_context).mb_lmin = (*jpeg_context).lmin;
     (*jpeg_context).lmax = (*jpeg_context).qmax * ffmpeg_sys::FF_QP2LAMBDA;
