@@ -20,9 +20,9 @@ import Transform2D
 import Text
 import LinearAlgebra.TransformSE2 as TransformSE2 exposing (TransSE2)
 import Math.Vector2 as Vector2 exposing (Vec2)
-import LinearAlgebra.Matrix2 as Matrix2 exposing (Mat2)
+-- import LinearAlgebra.Matrix2 as Matrix2 exposing (Mat2)
 
-import Curves
+import Curves exposing (BezierSpline)
 
 type Action =
   -- WindowDims (Int, Int)
@@ -153,6 +153,29 @@ tickUpdate time dims model =
       windowDims = dims
     }
 
+-- moveSpline : Vec2 -> BezierSpline -> BezierSpline
+-- moveSpline mousePos
+--   let
+--     mouseDist pos = Vector2.distance pos mousePos
+--     sorted = List.sortBy mouseDist model.points
+--     closest = List.head sorted
+--     replace closest pt =
+--       if closest == pt
+--         then mousePos
+--         else pt
+--     points = case closest of
+--       Just pos ->
+--         if model.dragging && mouseDist pos < 100
+--           then
+--             List.map (replace pos) model.points
+--           else
+--         model.points
+--       _ -> model.points
+--   in { model |
+--       mousePos = mousePos,
+--       points = points
+--     }
+
 mouseMoveUpdate : (Int, Int) -> Model -> Model
 mouseMoveUpdate (ix, iy) model =
   let
@@ -232,13 +255,13 @@ view address model =
     curve = case model.points of
       p1::p2::p3::p4::[] ->
         let
-          frameFunc = Curves.cubicBezierFrame p1 p2 p3 p4
+          frameFunc = Curves.cubicBezierFrame (p1, p2, p3, p4)
           (randomOffsets, seed) = Curves.randomOffsets (0, 1) 10 frameFunc 100 model.seed
           randomOffsetPoints = List.map (colPoint (Color.hsl 0 0 0.5)) randomOffsets
         in
           GfxC.group <| [
-            Curves.drawCubicBezier p1 p2 p3 p4,
-            Curves.drawCubicBezierFrames p1 p2 p3 p4
+            Curves.drawCubicBezier (p1, p2, p3, p4),
+            Curves.drawCubicBezierFrames (p1, p2, p3, p4)
           ] ++ randomOffsetPoints
       _ -> label "Failed" 0 0
     forms = curve :: points

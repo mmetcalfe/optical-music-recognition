@@ -1,5 +1,8 @@
 module Curves where
 
+{-| Bezier curve functions based on http://pomax.github.io/bezierinfo/
+-}
+
 -- Graphics
 import Color
 import Graphics.Collage as GfxC
@@ -13,6 +16,8 @@ import LinearAlgebra.Angle as Angle
 
 import Random
 import Random.Distributions
+
+type alias BezierSpline = (Vec2, Vec2, Vec2, Vec2)
 
 bezier2 : (Float, Float, Float) -> Float -> Float
 bezier2 (w0, w1, w2) t =
@@ -72,8 +77,8 @@ cubicBezierTangent a b c d t =
   in
     Vector2.normalize <| Vector2.vec2 (fnX t) (fnY t)
 
-cubicBezierFrame : Vec2 -> Vec2 -> Vec2 -> Vec2 -> Float -> TransSE2
-cubicBezierFrame a b c d t =
+cubicBezierFrame : BezierSpline -> Float -> TransSE2
+cubicBezierFrame (a, b, c, d) t =
   let
     point = cubicBezier a b c d t
     tangent = cubicBezierTangent a b c d t
@@ -147,8 +152,8 @@ drawParametricFrames func samples range =
   in
     GfxC.group (List.map (drawFrame 10 << func) times)
 
-drawCubicBezier : Vec2 -> Vec2 -> Vec2 -> Vec2 -> GfxC.Form
-drawCubicBezier a b c d =
+drawCubicBezier : BezierSpline -> GfxC.Form
+drawCubicBezier (a, b, c, d) =
   let
     lines = drawPath [ a, b, c, d ]
     func = cubicBezier a b c d
@@ -156,11 +161,11 @@ drawCubicBezier a b c d =
   in
     GfxC.group [ lines, curve ]
 
-drawCubicBezierFrames : Vec2 -> Vec2 -> Vec2 -> Vec2 -> GfxC.Form
-drawCubicBezierFrames a b c d =
+drawCubicBezierFrames : BezierSpline -> GfxC.Form
+drawCubicBezierFrames (a, b, c, d) =
   let
     lines = drawPath [ a, b, c, d ]
-    func = cubicBezierFrame a b c d
+    func = cubicBezierFrame (a, b, c, d)
     curve = drawParametricFrames func 10 (0, 1)
   in
     GfxC.group [ lines, curve ]
