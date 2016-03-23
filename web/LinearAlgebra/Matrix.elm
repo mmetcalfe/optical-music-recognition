@@ -1,11 +1,13 @@
 module LinearAlgebra.Matrix
-  ( Mat, identity
+  ( Mat, zeroes, identity, matrix
   , fromLists, toLists
-  , row
+  , row, col, getSubmat
   , negate, transpose, inv
   , add, sub, mul, scale
   , qr, gaussJordan
   , invUpperTri, newtonInverse
+  , householder
+  , joinRows, joinCols
   ) where
 
 {-| comment
@@ -75,6 +77,10 @@ identity shape =
   in
     { shape = shape, data = Array.initialize len identFill}
 
+zeroes : (Int, Int) -> Mat
+zeroes shape =
+  matrix shape (always 0)
+
 fromLists : List (List Float) -> Maybe Mat
 fromLists lists =
   let
@@ -97,18 +103,81 @@ toLists m =
     (rows, cols) = m.shape
     fromMaybe = unsafe "toLists: matrix internals were inconsistent."
   in
-    List.map (Array.toList << fromMaybe << flip row m) [0..rows-1]
+    List.map (Array.toList << .data << fromMaybe << flip row m) [0..rows-1]
 
-row : Int -> Mat -> Maybe (Array.Array Float)
+row : Int -> Mat -> Maybe Mat
 row r m =
   let
     (rows, cols) = m.shape
     start = locationToIndex m.shape (r, 0)
     end = start + cols
+    data = Array.slice start end m.data
   in
     if r >= 0 && r < rows
-      then Just <| Array.slice start end m.data
+      then Just <| {data=data, shape=(1, cols)}
       else Nothing
+
+col : Int -> Mat -> Maybe Mat
+col c m =
+  let
+    fromMaybe = unsafe "toLists: matrix internals were inconsistent."
+    (rows, cols) = m.shape
+    getVal r = fromMaybe <| get (r, c) m
+    data = Array.fromList <| List.map getVal [0..rows-1]
+  in
+    if c >= 0 && c < cols
+      then Just <| {data=data, shape=(rows, 1)}
+      else Nothing
+
+getSubmat : Int -> Int -> Int -> Int -> Mat -> Maybe Mat
+getSubmat startRow startCol endRow endCol m =
+  let
+    (rows, cols) = m.shape
+    -- TODO: Treat startRow >= rows, etc. as errors.
+    sr = startRow % rows
+    sc = startCol % cols
+    er = endRow % rows
+    ec = endCol % cols
+    indexIsInSubmat i =
+      let
+        (r, c) = indexToLocation m.shape i
+      in
+        sr <= r && r <= er && sc <= c && c <= ec
+    indexedData = Array.indexedMap (\i v -> (i, v)) m.data
+    filteredData = Array.filter (\(i, v) -> indexIsInSubmat i) indexedData
+    data = Array.map (\(i, v) -> v) filteredData
+    newShape = (er - sr + 1, ec - sr + 1)
+    rangeIsValid (rmin, rmax) (r1, r2) =
+      rmin <= r1 && r1 <= r2 && r2 < rmax
+  in
+    if rangeIsValid (0, rows) (sr, er) && rangeIsValid (0, cols) (sc, ec)
+      then
+        Just {data=data, shape=newShape}
+      else
+        Nothing
+
+joinCols : Mat -> Mat -> Maybe Mat
+joinCols m1 m2 =
+  let
+    (rows1, cols1) = m1.shape
+    (rows2, cols2) = m2.shape
+    data = Array.append m1.data m2.data
+  in
+    if cols1 == cols2
+      then
+        Just {data=data, shape=(rows1+rows2, cols1)}
+      else
+        Nothing
+
+joinRows : Mat -> Mat -> Maybe Mat
+joinRows m1 m2 =
+  -- TODO: Use a more efficient method.
+  let
+    m1t = transpose m1
+    m2t = transpose m2
+    m1m2t = joinCols m1t m2t
+  in
+    Maybe.map transpose m1m2t
 
 negate : Mat -> Mat
 negate a =
@@ -132,16 +201,21 @@ transpose a =
   let
     fromMaybe = unsafe "transpose: matrix internals were inconsistent."
     (r, c) = a.shape
-    newShape = (c, r)
-    transposedIndex i =
-      let
-        (r, c) = indexToLocation a.shape i
-      in
-        locationToIndex newShape (c, r)
-    swap i _ = fromMaybe <| Array.get (transposedIndex i) a.data
-    data = Array.indexedMap swap a.data
   in
-    { data = data, shape = newShape }
+    matrix (c, r) (\(r, c) -> fromMaybe <| get (c, r) a)
+  -- let
+  --   fromMaybe = unsafe "transpose: matrix internals were inconsistent."
+  --   (r, c) = a.shape
+  --   newShape = (c, r)
+  --   transposedIndex i =
+  --     let
+  --       (r, c) = indexToLocation a.shape i
+  --     in
+  --       locationToIndex newShape (c, r)
+  --   swap i _ = fromMaybe <| Array.get (transposedIndex i) a.data
+  --   data = Array.indexedMap swap a.data
+  -- in
+  --   { data = data, shape = newShape }
 
 scale : Float -> Mat -> Mat
 scale f m =
@@ -271,10 +345,86 @@ invUpperTri u =
       else
         Nothing
 
+length : Mat -> Maybe Float
+length x =
+  let
+    (rows, cols) = x.shape
+  in
+    if rows > 0 && cols == 1
+      then
+        Just <| sqrt <| Array.foldl (\v s -> s + v*v) 0 x.data
+      else
+        Nothing
 
+normalise : Mat -> Maybe Mat
+normalise x =
+  let
+    ml = length x
+  in
+    Maybe.map (\l -> scale(1/l) x) ml
 
-qr : Mat -> (Mat, Mat)
-qr a = (empty,empty)
+sign : Float -> Float
+sign x =
+  if x == 0
+    then 0
+    else
+      if x > 0
+        then 1
+        else -1
+
+{-| Return the householder matrix that transforms x into [a, 0, ..., 0].
+-}
+householder : Mat -> Maybe Mat
+householder x =
+  let
+    -- TODO: Handle failure cases correctly.
+    fromMaybe = unsafe "householder: x was not a valid column matrix."
+    (rows, cols) = x.shape
+    asign = -(sign (fromMaybe <| get (0, 0) x)) -- using this sign avoids loss of significance
+    a = asign * (fromMaybe <| length x)
+    ae1 = matrix (rows, 1) (\(r, _) -> if r == 0 then a else 0)
+    u = fromMaybe <| x `sub` ae1
+    v = fromMaybe <| normalise u
+    vt = transpose v
+    q = (identity (rows, rows)) `sub` (2 `scale` (fromMaybe <| v `mul` vt))
+  in
+    q
+
+{-| Perform a qr decomposition of the matrix
+-}
+qrStep : Int -> (Mat, Mat) -> (Mat, Mat)
+qrStep i (cumQ, cumR) =
+  let
+    (rows, cols) = cumR.shape
+    ai = unsafe "qrStep: submat" <| getSubmat i i -1 -1 cumR
+    x = unsafe "qrStep: x" <| col 0 ai
+    tl = identity (i, i)
+    tr = zeroes (i, cols-i)
+    bl = zeroes (rows-i, i)
+    br = unsafe "qrStep: householder" <| householder x
+    testbr = br `mul` ai
+    testbr2 = br `mul` (transpose br)
+    leftQ = unsafe "qrStep: ql" <| tl `joinCols` bl
+    rightQ = unsafe "qrStep: qr" <| tr `joinCols` br
+    qi = unsafe "qrStep: qi" <| joinRows leftQ rightQ
+    testQi = qi `mul` (transpose qi)
+    resultQ = unsafe "qrStep: qc" <| cumQ `mul` (transpose qi)
+    testQ = resultQ `mul` (transpose resultQ)
+    resultR = unsafe "qrStep: rc" <| qi `mul` cumR
+    testQR = resultQ `mul` resultR
+  in
+    (resultQ, resultR)
+
+qr : Mat -> Maybe (Mat, Mat)
+qr m =
+  let
+    (rows, cols) = m.shape
+    initQ = identity (rows, rows)
+    -- t = min (rows-2) (cols-1)
+    t = min (rows-1) (cols)
+  in
+    Just <| List.foldl qrStep (initQ, m) [0..t]
+
 
 gaussJordan : Mat -> Mat
 gaussJordan a = empty
