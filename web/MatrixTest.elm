@@ -1,8 +1,9 @@
-import Html exposing (div, button, text)
+-- import Html exposing (div, button, text)
 import Graphics.Element as GfxE
 
 
 import LinearAlgebra.Matrix as Matrix
+import LinearAlgebra.Matrix.Unsafe as UnsafeMatrix
 
 -- inv, qr, gaussJordan
 -- TODO: Test non-square matrices.
@@ -71,7 +72,7 @@ main =
 
     vec5 = unsafe "vec5" <| Matrix.fromLists [[0.1],[0.2],[0.3],[0.4],[0.5]]
     soln3 = unsafe "soln3" <| Matrix.solve mat53 vec5
-    soln3Test = unsafe "soln3Test" <| Matrix.mul mat53 soln3
+    soln3Test = UnsafeMatrix.mul mat53 soln3
   in
     GfxE.flow GfxE.down
       [ GfxE.show <| i

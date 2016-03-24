@@ -1,7 +1,7 @@
 module LinearAlgebra.Matrix
   ( Mat, zeroes, identity, matrix
   , fromLists, toLists
-  , row, col, getSubmat
+  , get, set, row, col, getSubmat
   , negate, transpose, inv
   , add, sub, mul, scale
   , qr
@@ -9,6 +9,7 @@ module LinearAlgebra.Matrix
   , householder
   , joinRows, joinCols
   , solve
+  , length, normalise
   ) where
 
 {-| comment
@@ -41,9 +42,6 @@ matrix shape f =
     (rows, cols) = shape
   in
     { shape = shape, data = Array.initialize (rows*cols) g}
-
-empty : Mat
-empty = Mat (0, 0) Array.empty
 
 indexToLocation : (Int, Int) -> Int -> (Int, Int)
 indexToLocation (rows, cols) i =
