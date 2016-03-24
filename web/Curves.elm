@@ -209,6 +209,14 @@ cubicBezierFromLists points =
       _ ->
         Debug.crash "cubicBezierFromLists: incorrect number of points."
 
+cubicBezierFromPoints : List Vec2 -> CubicBezierSpline
+cubicBezierFromPoints vectors =
+    case vectors of
+      v1::v2::v3::v4::[] ->
+        (v1, v2, v3, v4)
+      _ ->
+        Debug.crash "cubicBezierFromLists: incorrect number of points."
+
 fitCubicBezierToPoints : List Vec2 -> CubicBezierSpline
 fitCubicBezierToPoints points =
   let

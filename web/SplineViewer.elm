@@ -33,13 +33,16 @@ type Action =
 -- { values : List (Float)
 type alias Model =
     { points : List Vec2
+    , offsetPoints : List Vec2
+    , spline : Curves.CubicBezierSpline
+    , bestFitSpline : Curves.CubicBezierSpline
     , mousePos : Vec2
     , dragging : Bool
     , canvasWidth : Int
     , windowDims : (Int, Int)
-    -- Old stuff:
-    , values : List Float
-    , pairs : List (Float, Float)
+    -- -- Old stuff:
+    -- , values : List Float
+    -- , pairs : List (Float, Float)
     , seed : Random.Seed
     }
 
@@ -77,15 +80,21 @@ initialModel : Model
 initialModel =
   let
     points = [Vector2.vec2 10 30, Vector2.vec2 50 50, Vector2.vec2 100 100, Vector2.vec2 100 200]
-    mousePos = Vector2.vec2 0 0
-    dragging = False
-    canvasWidth = 600
-    windowDims = (500, 500)
-    values = (List.map toFloat [])
-    pairs = []
-    seed = (Random.initialSeed 1)
   in
-    Model points mousePos dragging canvasWidth windowDims values pairs seed
+  -- let
+  { points = points
+  ,  offsetPoints = []
+  ,  spline = Curves.cubicBezierFromPoints points
+  ,  bestFitSpline = Curves.cubicBezierFromPoints points
+  ,  mousePos = Vector2.vec2 0 0
+  ,  dragging = False
+  ,  canvasWidth = 600
+  ,  windowDims = (500, 500)
+    -- values = (List.map toFloat [])
+    -- pairs = []
+  ,  seed = (Random.initialSeed 1) }
+  -- in
+  --   Model points offsetPoints spline bestFitSpline mousePos dragging canvasWidth windowDims seed -- values pairs seed
   -- Model () (List.map toFloat []) [] (Random.initialSeed 1)
     -- { values = List.map toFloat [0, 1, 2]
     -- , seed = Random.initialSeed 0
@@ -146,11 +155,18 @@ update action model =
 tickUpdate : Float -> (Int, Int) -> Model -> Model
 tickUpdate time dims model =
   let
-    (value, seed') = generateValue model.seed
+    spline = Curves.cubicBezierFromPoints model.points
+    frameFunc = Curves.cubicBezierFrame spline
+    numOffsets = 50
+    (offsetPoints, seed') = Curves.randomOffsets (0, 1) 10 frameFunc numOffsets model.seed
+    bestFitSpline = Curves.fitCubicBezierToPoints offsetPoints
   in { model |
-      values = List.take 500 <| value :: model.values,
+      -- values = List.take 500 <| value :: model.values,
       seed = seed',
-      windowDims = dims
+      windowDims = dims,
+      offsetPoints = offsetPoints,
+      spline = spline,
+      bestFitSpline = bestFitSpline
     }
 
 -- moveSpline : Vec2 -> CubicBezierSpline -> CubicBezierSpline
@@ -252,24 +268,16 @@ view address model =
     -- div [] [Html.text <| toString model.values]
   -- Html.fromElement <| Plot.timeSeries Plot.defaultPlot model.values
     points = List.indexedMap drawPoint model.points
-    curve = case model.points of
-      p1::p2::p3::p4::[] ->
-        let
-          spline = (p1, p2, p3, p4)
-          frameFunc = Curves.cubicBezierFrame spline
-          numOffsets = 50
-          (randomOffsets, seed) = Curves.randomOffsets (0, 1) 10 frameFunc numOffsets model.seed
-          randomOffsetPoints = List.map (colPoint (Color.hsl 0 0 0.5)) randomOffsets
-          bestFitSpline = Curves.fitCubicBezierToPoints randomOffsets
-        in
+    randomOffsetPoints = List.map (colPoint (Color.hsl 0 0 0.5)) model.offsetPoints
+    spline = Curves.cubicBezierFromPoints model.points
+    curve =
           GfxC.group <| [
             Curves.drawCubicBezier spline,
             Curves.drawCubicBezierFrames spline,
 
-            Curves.drawCubicBezier bestFitSpline,
-            Curves.drawCubicBezierFrames bestFitSpline
+            Curves.drawCubicBezier model.bestFitSpline,
+            Curves.drawCubicBezierFrames model.bestFitSpline
           ] ++ randomOffsetPoints
-      _ -> label "Failed" 0 0
     forms = curve :: points
     (cw, ch) = model.windowDims
     drawing = GfxC.collage cw ch forms
