@@ -38,20 +38,40 @@ main =
     aha = Maybe.withDefault Nothing <| Maybe.map2 Matrix.mul ah d
     uqr = d `Maybe.andThen` Matrix.qr
     (uq, ur) = Maybe.withDefault (i,i) uqr
+
+    -- inverse
+    dinv = d `Maybe.andThen` Matrix.inv
+    dinvtest = Maybe.withDefault Nothing <| Maybe.map2 Matrix.mul d dinv
+
+    -- non-square:
+    mat53 = Matrix.fromLists [[3, 2, 6], [7, 5, 1], [4, 9, 0], [6, 1, 8], [4, 2, 3]]
+    qr53 = mat53 `Maybe.andThen` Matrix.qr
+    (q53, r53) = Maybe.withDefault (i,i) qr53
+    mat35 = Matrix.fromLists [[3, 2, 0, 4, 1], [8, 7, 5, 1, 6], [2, 4, 9, 6, 8]]
+    qr35 = mat35 `Maybe.andThen` Matrix.qr
+    (q35, r35) = Maybe.withDefault (i,i) qr35
   in
     GfxE.flow GfxE.down
       [ GfxE.show <| i
-      -- , GfxE.show <| a
-      -- , GfxE.show <| ma
-      -- , GfxE.show <| sa
-      -- , GfxE.show <| sat
-      -- , GfxE.show <| Matrix.toLists i
-      -- , GfxE.show <| Maybe.map Matrix.toLists b
-      -- , GfxE.show <| Maybe.map Matrix.toLists c
-      -- , GfxE.show <| Maybe.map Matrix.toLists bpc
-      -- , GfxE.show <| Maybe.map Matrix.toLists bmc
-      -- , GfxE.show <| Maybe.map Matrix.toLists bc
-      , GfxE.show "Matrix and inverse:"
+      , GfxE.show "Matrix:"
+      , GfxE.show <| a
+      , GfxE.show "Negate:"
+      , GfxE.show <| ma
+      , GfxE.show "Scale:"
+      , GfxE.show <| sa
+      , GfxE.show "Transpose:"
+      , GfxE.show <| sat
+      , GfxE.show "To Lists:"
+      , GfxE.show <| Matrix.toLists i
+      , GfxE.show <| Maybe.map Matrix.toLists b
+      , GfxE.show <| Maybe.map Matrix.toLists c
+      , GfxE.show "Add:"
+      , GfxE.show <| Maybe.map Matrix.toLists bpc
+      , GfxE.show "Subtract:"
+      , GfxE.show <| Maybe.map Matrix.toLists bmc
+      , GfxE.show "Multiply:"
+      , GfxE.show <| Maybe.map Matrix.toLists bc
+      , GfxE.show "Upper triangular matrix and inverse:"
       , GfxE.show <| Maybe.map Matrix.toLists u
       , GfxE.show <| Maybe.map Matrix.toLists ui
       , GfxE.show "Identities:"
@@ -65,14 +85,32 @@ main =
       , GfxE.show <| Maybe.map Matrix.toLists ah
       , GfxE.show <| Maybe.map Matrix.toLists aha
       , GfxE.show "Joins:"
+      , GfxE.show "  components:"
       , GfxE.show <| Matrix.toLists leftm
       , GfxE.show <| Matrix.toLists rightm
+      , GfxE.show "  transposes:"
       , GfxE.show <| Matrix.toLists <| Matrix.transpose leftm
       , GfxE.show <| Matrix.toLists <| Matrix.transpose rightm
+      , GfxE.show "  joined:"
       , GfxE.show <| Maybe.map Matrix.toLists joinedm
       , GfxE.show "QR decomposition:"
       , GfxE.show <| Maybe.map Matrix.toLists d
       , GfxE.show <| Matrix.toLists uq
       , GfxE.show <| Matrix.toLists ur
       , GfxE.show <| Maybe.map Matrix.toLists (Matrix.mul uq ur)
+      , GfxE.show "  non-square:"
+      , GfxE.show "  5x3:"
+      , GfxE.show <| Maybe.map Matrix.toLists mat53
+      , GfxE.show <| Matrix.toLists q53
+      , GfxE.show <| Matrix.toLists r53
+      , GfxE.show <| Maybe.map Matrix.toLists (Matrix.mul q53 r53)
+      , GfxE.show "  3x5:"
+      , GfxE.show <| Maybe.map Matrix.toLists mat35
+      , GfxE.show <| Matrix.toLists q35
+      , GfxE.show <| Matrix.toLists r35
+      , GfxE.show <| Maybe.map Matrix.toLists (Matrix.mul q35 r35)
+      , GfxE.show "General matrix and inverse:"
+      , GfxE.show <| Maybe.map Matrix.toLists d
+      , GfxE.show <| Maybe.map Matrix.toLists dinv
+      , GfxE.show <| Maybe.map Matrix.toLists dinvtest
       ]

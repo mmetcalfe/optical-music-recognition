@@ -4,7 +4,7 @@ module LinearAlgebra.Matrix
   , row, col, getSubmat
   , negate, transpose, inv
   , add, sub, mul, scale
-  , qr, gaussJordan
+  , qr
   , invUpperTri, newtonInverse
   , householder
   , joinRows, joinCols
@@ -146,7 +146,7 @@ getSubmat startRow startCol endRow endCol m =
     indexedData = Array.indexedMap (\i v -> (i, v)) m.data
     filteredData = Array.filter (\(i, v) -> indexIsInSubmat i) indexedData
     data = Array.map (\(i, v) -> v) filteredData
-    newShape = (er - sr + 1, ec - sr + 1)
+    newShape = (er - sr + 1, ec - sc + 1)
     rangeIsValid (rmin, rmax) (r1, r2) =
       rmin <= r1 && r1 <= r2 && r2 < rmax
   in
@@ -239,8 +239,15 @@ mul a b =
       else
         Nothing
 
-inv : Mat -> Mat
-inv a = empty
+inv : Mat -> Maybe Mat
+inv a =
+  case qr a of
+    Just (q, r) ->
+      Maybe.andThen (invUpperTri r) (\rinv -> rinv `mul` (transpose q))
+    _ ->
+      Nothing
+
+
 
 {-| Improve an estimate x of the inverse of the matrix a.
 -}
@@ -399,7 +406,7 @@ qrStep i (cumQ, cumR) =
     ai = unsafe "qrStep: submat" <| getSubmat i i -1 -1 cumR
     x = unsafe "qrStep: x" <| col 0 ai
     tl = identity (i, i)
-    tr = zeroes (i, cols-i)
+    tr = zeroes (i, rows-i)
     bl = zeroes (rows-i, i)
     br = unsafe "qrStep: householder" <| householder x
     testbr = br `mul` ai
@@ -424,7 +431,3 @@ qr m =
     t = min (rows-1) (cols)
   in
     Just <| List.foldl qrStep (initQ, m) [0..t]
-
-
-gaussJordan : Mat -> Mat
-gaussJordan a = empty
