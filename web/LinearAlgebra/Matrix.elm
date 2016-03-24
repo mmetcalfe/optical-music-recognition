@@ -8,6 +8,7 @@ module LinearAlgebra.Matrix
   , invUpperTri, newtonInverse
   , householder
   , joinRows, joinCols
+  , solve
   ) where
 
 {-| comment
@@ -431,3 +432,42 @@ qr m =
     t = min (rows-1) (cols)
   in
     Just <| List.foldl qrStep (initQ, m) [0..t]
+
+{-| Solves the system `ax = b` for matrix `a` and column vector `b`.
+Returns a least squares solution if `a` is non-square
+
+    let
+      a = fromLists [[1,2,3], [4,5,6], [7,8,9], [10,11,12]]
+      b = fromLists [0.1, -0.2, 0.3]
+    in
+      x = solve a b
+-}
+solve : Mat -> Mat -> Maybe Mat
+-- See: https://en.wikipedia.org/wiki/QR_decomposition#Using_for_solution_to_linear_inverse_problems
+-- TODO: Use backward/forward substitution rather than calculating the inverse.
+solve a b =
+  let
+    (rows, cols) = a.shape
+  in
+    if rows < cols
+      then -- The problem is underdetermined
+        let
+          at = transpose a
+          (atq, atr) = unsafe "solve (m<n): atqr" <| qr at
+          r1 = unsafe "solve (m<n): r1" <| getSubmat 0 0 (rows-1) (rows-1) atr
+          r1Inv = unsafe "solve (m<n): r1Inv" <| invUpperTri r1
+          rZeroes = zeroes ((cols - rows), rows)
+          rInv = unsafe "solve (m<n): rInv" <| r1Inv `joinCols` rZeroes
+          pseudoInv = unsafe "solve (m<n): pseudoInv" <| atq `mul` rInv
+        in
+          mul pseudoInv b
+      else -- The problem is fully determined or overdetermined
+        let
+          (aq, ar) = Debug.log "aq, ar" <| unsafe "solve (m>=n): aqr" <| qr a
+          q1 = Debug.log "q1" <| unsafe "solve (m>=n): q1" <| getSubmat 0 0 (rows-1) (cols-1) aq
+          r1 = Debug.log "r1" <| unsafe "solve (m>=n): r1" <| getSubmat 0 0 (cols-1) (cols-1) ar
+          r1Inv = Debug.log "r1Inv" <| unsafe "solve (m>=n): r1Inv" <| invUpperTri r1
+          q1t = Debug.log "q1t" <| transpose q1
+          pseudoInv = Debug.log "pseudoInv" <| unsafe "solve (m>=n): pseudoInv" <| r1Inv `mul` q1t
+        in
+          mul pseudoInv b
