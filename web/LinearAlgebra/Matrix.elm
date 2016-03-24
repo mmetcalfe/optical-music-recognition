@@ -461,11 +461,11 @@ solve a b =
           mul pseudoInv b
       else -- The problem is fully determined or overdetermined
         let
-          (aq, ar) = Debug.log "aq, ar" <| unsafe "solve (m>=n): aqr" <| qr a
-          q1 = Debug.log "q1" <| unsafe "solve (m>=n): q1" <| getSubmat 0 0 (rows-1) (cols-1) aq
-          r1 = Debug.log "r1" <| unsafe "solve (m>=n): r1" <| getSubmat 0 0 (cols-1) (cols-1) ar
-          r1Inv = Debug.log "r1Inv" <| unsafe "solve (m>=n): r1Inv" <| invUpperTri r1
-          q1t = Debug.log "q1t" <| transpose q1
-          pseudoInv = Debug.log "pseudoInv" <| unsafe "solve (m>=n): pseudoInv" <| r1Inv `mul` q1t
+          (aq, ar) = unsafe "solve (m>=n): aqr" <| qr a
+          q1 = unsafe "solve (m>=n): q1" <| getSubmat 0 0 (rows-1) (cols-1) aq
+          r1 = unsafe "solve (m>=n): r1" <| getSubmat 0 0 (cols-1) (cols-1) ar
+          r1Inv = unsafe "solve (m>=n): r1Inv" <| invUpperTri r1
+          q1t = transpose q1
+          pseudoInv = unsafe "solve (m>=n): pseudoInv" <| r1Inv `mul` q1t
         in
           mul pseudoInv b

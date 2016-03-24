@@ -8,16 +8,17 @@ import Color
 import Graphics.Collage as GfxC
 import Graphics.Element as GfxE
 import Transform2D
-import Text
 import LinearAlgebra.TransformSE2 as TransformSE2 exposing (TransSE2)
 import Math.Vector2 as Vector2 exposing (Vec2)
 import LinearAlgebra.Matrix2 as Matrix2 exposing (Mat2)
 import LinearAlgebra.Angle as Angle
+import LinearAlgebra.Matrix as Matrix exposing (Mat)
+import LinearAlgebra.Matrix.Unsafe as UnsafeMatrix
 
 import Random
 import Random.Distributions
 
-type alias BezierSpline = (Vec2, Vec2, Vec2, Vec2)
+type alias CubicBezierSpline = (Vec2, Vec2, Vec2, Vec2)
 
 bezier2 : (Float, Float, Float) -> Float -> Float
 bezier2 (w0, w1, w2) t =
@@ -77,7 +78,7 @@ cubicBezierTangent a b c d t =
   in
     Vector2.normalize <| Vector2.vec2 (fnX t) (fnY t)
 
-cubicBezierFrame : BezierSpline -> Float -> TransSE2
+cubicBezierFrame : CubicBezierSpline -> Float -> TransSE2
 cubicBezierFrame (a, b, c, d) t =
   let
     point = cubicBezier a b c d t
@@ -152,7 +153,7 @@ drawParametricFrames func samples range =
   in
     GfxC.group (List.map (drawFrame 10 << func) times)
 
-drawCubicBezier : BezierSpline -> GfxC.Form
+drawCubicBezier : CubicBezierSpline -> GfxC.Form
 drawCubicBezier (a, b, c, d) =
   let
     lines = drawPath [ a, b, c, d ]
@@ -161,7 +162,7 @@ drawCubicBezier (a, b, c, d) =
   in
     GfxC.group [ lines, curve ]
 
-drawCubicBezierFrames : BezierSpline -> GfxC.Form
+drawCubicBezierFrames : CubicBezierSpline -> GfxC.Form
 drawCubicBezierFrames (a, b, c, d) =
   let
     lines = drawPath [ a, b, c, d ]
@@ -169,3 +170,57 @@ drawCubicBezierFrames (a, b, c, d) =
     curve = drawParametricFrames func 10 (0, 1)
   in
     GfxC.group [ lines, curve ]
+
+
+cubicBezierMatrix : Mat
+cubicBezierMatrix =
+  UnsafeMatrix.fromLists
+    [ [-1,  3, -3,  1]
+    , [ 3, -6,  3,  0]
+    , [-3,  3,  0,  0]
+    , [ 1,  0,  0,  0]
+    ]
+
+estimateTimes : List Vec2 -> List Float
+-- TODO: Use a time estimation method similar to:
+-- http://www.vision.caltech.edu/malaa/publications/aly08realtime.pdf
+estimateTimes points =
+  let
+    len = List.length points
+  in
+    List.take len <| linspace len (0, 1)
+
+vec2FromList : List Float -> Vec2
+vec2FromList values =
+  case values of
+    a::b::[] ->
+      Vector2.vec2 a b
+    _ ->
+      Debug.crash "vec2FromList: incorrect number of values."
+
+cubicBezierFromLists : List (List Float) -> CubicBezierSpline
+cubicBezierFromLists points =
+  let
+    vectors = List.map vec2FromList points
+  in
+    case vectors of
+      v1::v2::v3::v4::[] ->
+        (v1, v2, v3, v4)
+      _ ->
+        Debug.crash "cubicBezierFromLists: incorrect number of points."
+
+fitCubicBezierToPoints : List Vec2 -> CubicBezierSpline
+fitCubicBezierToPoints points =
+  let
+    sortedPoints = List.sortBy Vector2.getX points
+    times = estimateTimes sortedPoints
+    tLists = List.map (\t -> [t^3, t^2, t, 1]) times
+    qLists = List.map ((\(a, b) -> [a, b]) << Vector2.toTuple) sortedPoints
+    q = UnsafeMatrix.fromLists qLists
+    t = UnsafeMatrix.fromLists tLists
+    m = cubicBezierMatrix
+    tm = UnsafeMatrix.mul t m
+    p = UnsafeMatrix.solve tm q
+    pLists = UnsafeMatrix.toLists p
+  in
+    cubicBezierFromLists pLists

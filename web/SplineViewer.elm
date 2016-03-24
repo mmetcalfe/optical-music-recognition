@@ -22,7 +22,7 @@ import LinearAlgebra.TransformSE2 as TransformSE2 exposing (TransSE2)
 import Math.Vector2 as Vector2 exposing (Vec2)
 -- import LinearAlgebra.Matrix2 as Matrix2 exposing (Mat2)
 
-import Curves exposing (BezierSpline)
+import Curves exposing (CubicBezierSpline)
 
 type Action =
   -- WindowDims (Int, Int)
@@ -153,7 +153,7 @@ tickUpdate time dims model =
       windowDims = dims
     }
 
--- moveSpline : Vec2 -> BezierSpline -> BezierSpline
+-- moveSpline : Vec2 -> CubicBezierSpline -> CubicBezierSpline
 -- moveSpline mousePos
 --   let
 --     mouseDist pos = Vector2.distance pos mousePos
@@ -255,13 +255,19 @@ view address model =
     curve = case model.points of
       p1::p2::p3::p4::[] ->
         let
-          frameFunc = Curves.cubicBezierFrame (p1, p2, p3, p4)
-          (randomOffsets, seed) = Curves.randomOffsets (0, 1) 10 frameFunc 100 model.seed
+          spline = (p1, p2, p3, p4)
+          frameFunc = Curves.cubicBezierFrame spline
+          numOffsets = 50
+          (randomOffsets, seed) = Curves.randomOffsets (0, 1) 10 frameFunc numOffsets model.seed
           randomOffsetPoints = List.map (colPoint (Color.hsl 0 0 0.5)) randomOffsets
+          bestFitSpline = Curves.fitCubicBezierToPoints randomOffsets
         in
           GfxC.group <| [
-            Curves.drawCubicBezier (p1, p2, p3, p4),
-            Curves.drawCubicBezierFrames (p1, p2, p3, p4)
+            Curves.drawCubicBezier spline,
+            Curves.drawCubicBezierFrames spline,
+
+            Curves.drawCubicBezier bestFitSpline,
+            Curves.drawCubicBezierFrames bestFitSpline
           ] ++ randomOffsetPoints
       _ -> label "Failed" 0 0
     forms = curve :: points
