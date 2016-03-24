@@ -6,11 +6,11 @@ module Curves where
 -- Graphics
 import Color
 import Graphics.Collage as GfxC
-import Graphics.Element as GfxE
-import Transform2D
+-- import Graphics.Element as GfxE
+-- import Transform2D
 import LinearAlgebra.TransformSE2 as TransformSE2 exposing (TransSE2)
 import Math.Vector2 as Vector2 exposing (Vec2)
-import LinearAlgebra.Matrix2 as Matrix2 exposing (Mat2)
+-- import LinearAlgebra.Matrix2 as Matrix2 exposing (Mat2)
 import LinearAlgebra.Angle as Angle
 import LinearAlgebra.Matrix as Matrix exposing (Mat)
 import LinearAlgebra.Matrix.Unsafe as UnsafeMatrix
@@ -115,13 +115,14 @@ drawLine a b =
     GfxC.segment (Vector2.toTuple a) (Vector2.toTuple b)
       |> GfxC.traced ls
 
-drawPath : List Vec2 -> GfxC.Form
+-- drawPath : List Vec2 -> GfxC.Form
+drawPath : List Vec2 -> GfxC.Path
 drawPath pts =
-  let
-    ls = GfxC.defaultLine
-  in
+  -- let
+    -- ls = GfxC.defaultLine
+  -- in
     GfxC.path (List.map Vector2.toTuple pts)
-      |> GfxC.traced ls
+      -- |> GfxC.traced ls
 
 linspace : Int -> (Float, Float) -> List Float
 linspace n (minv, maxv) =
@@ -139,7 +140,8 @@ drawFrame r frame =
   in
     GfxC.group [drawLine pt0 ptx, drawLine pt0 pty]
 
-drawParametric : (Float -> Vec2) -> Int -> (Float, Float) -> GfxC.Form
+-- drawParametric : (Float -> Vec2) -> Int -> (Float, Float) -> GfxC.Form
+drawParametric : (Float -> Vec2) -> Int -> (Float, Float) -> GfxC.Path
 drawParametric func samples range =
   let
     times = linspace samples range
@@ -153,24 +155,50 @@ drawParametricFrames func samples range =
   in
     GfxC.group (List.map (drawFrame 10 << func) times)
 
-drawCubicBezier : CubicBezierSpline -> GfxC.Form
+-- drawCubicBezier : CubicBezierSpline -> GfxC.Form
+drawCubicBezier : CubicBezierSpline -> GfxC.Path
 drawCubicBezier (a, b, c, d) =
   let
-    lines = drawPath [ a, b, c, d ]
     func = cubicBezier a b c d
-    curve = drawParametric func 100 (0, 1)
   in
-    GfxC.group [ lines, curve ]
+    drawParametric func 100 (0, 1)
 
 drawCubicBezierFrames : CubicBezierSpline -> GfxC.Form
-drawCubicBezierFrames (a, b, c, d) =
+drawCubicBezierFrames spline =
   let
-    lines = drawPath [ a, b, c, d ]
-    func = cubicBezierFrame (a, b, c, d)
-    curve = drawParametricFrames func 10 (0, 1)
+    func = cubicBezierFrame spline
   in
-    GfxC.group [ lines, curve ]
+    drawParametricFrames func 10 (0, 1)
 
+debugDrawCubicBezier : Color.Color -> CubicBezierSpline -> GfxC.Form
+debugDrawCubicBezier col spline =
+  let
+    hsl = Color.toHsl col
+    hullCol = Color.hsl hsl.hue (hsl.saturation*0.5) (0.66 + hsl.lightness*0.33)
+    lw = 3
+    circleLineStyle =
+      let ls = GfxC.defaultLine
+      in { ls | width = lw, color = col }
+    hullLineStyle =
+      let ls = GfxC.defaultLine
+      in { ls | width = lw, color = hullCol } -- Color.complement col }
+    curveLineStyle =
+      let ls = GfxC.defaultLine
+      in { ls | width = 2*lw, color = col }
+    drawCircle xy =
+      GfxC.circle (1.5*lw)
+        |> GfxC.outlined circleLineStyle
+        |> GfxC.move (Vector2.toTuple xy)
+    (a, b, c, d) = spline
+    points = [a, b, c, d]
+    lines = drawPath [ a, b, c, d ]
+    circles = List.map drawCircle points
+  in
+    GfxC.group <| [
+      lines |> GfxC.traced hullLineStyle,
+      (drawCubicBezier spline) |> GfxC.traced curveLineStyle,
+      drawCubicBezierFrames spline
+    ] ++ circles
 
 cubicBezierMatrix : Mat
 cubicBezierMatrix =

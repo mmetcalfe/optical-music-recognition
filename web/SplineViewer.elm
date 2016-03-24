@@ -267,18 +267,15 @@ view address model =
   -- in
     -- div [] [Html.text <| toString model.values]
   -- Html.fromElement <| Plot.timeSeries Plot.defaultPlot model.values
-    points = List.indexedMap drawPoint model.points
-    randomOffsetPoints = List.map (colPoint (Color.hsl 0 0 0.5)) model.offsetPoints
+    -- points = List.indexedMap drawPoint model.points
+    randomOffsetPoints = List.map (colPoint (Color.hsl 0 0 0.8)) model.offsetPoints
     spline = Curves.cubicBezierFromPoints model.points
     curve =
-          GfxC.group <| [
-            Curves.drawCubicBezier spline,
-            Curves.drawCubicBezierFrames spline,
-
-            Curves.drawCubicBezier model.bestFitSpline,
-            Curves.drawCubicBezierFrames model.bestFitSpline
-          ] ++ randomOffsetPoints
-    forms = curve :: points
+          GfxC.group <| randomOffsetPoints ++ [
+            Curves.debugDrawCubicBezier (Color.hsl 0 0.8 0.6) spline,
+            Curves.debugDrawCubicBezier (Color.hsl (0.6*(2*pi)) 0.8 0.8) model.bestFitSpline
+          ]
+    forms = [curve] -- :: points
     (cw, ch) = model.windowDims
     drawing = GfxC.collage cw ch forms
   in
