@@ -23,7 +23,7 @@ type alias RansacParams =
   { numIterations : Int
 
   -- Minimum distance to model to count as an inlier
-  , minDist : Float
+  , maxDist : Float
 
   -- Minimum number of inliers required for a model to be accepted
   , minInliers : Int
@@ -65,12 +65,11 @@ chooseK k array =
     Random.map fst choiceAndOthers
 
 ransac
-  : Random.Seed
-  -> RansacModel pt model
+  : RansacModel pt model
   -> RansacParams
   -> Array.Array pt
   -> Generator (Maybe model)
-ransac seed model params data =
+ransac model params data =
   let
     ransacIteration state =
       let
@@ -84,10 +83,18 @@ ransac seed model params data =
             currentFit = model.fitInliers samples
 
             -- Find the set of inliers:
-            currentInliers = model.findInliers params.minDist data currentFit
+            currentInliers = model.findInliers params.maxDist data currentFit
+
+            -- Determine whether the model is allowed:
+            modelResult =
+              if List.length currentInliers > params.minInliers
+                then
+                  Just currentFit
+                else
+                  Nothing
           in
             { samples = samples
-            , model = Just currentFit
+            , model = modelResult
             , inliers = currentInliers
             }
 
@@ -99,6 +106,14 @@ ransac seed model params data =
     initialGen = ransacIteration (RansacState [] Nothing [])
     foldFunc i g = g `Random.andThen` ransacIteration
     stateGen = List.foldl foldFunc initialGen [1..params.numIterations]
-    closeFit = Random.map (\st -> model.fitModel st.inliers) stateGen
+    closeFitFunc st =
+      case st.model of
+        Just _ ->
+          model.fitModel st.inliers
+        Nothing ->
+          Nothing
+    closeFit =
+      Random.map closeFitFunc stateGen
+    -- closeFit = Random.map (\st -> st.model) stateGen
   in
     closeFit

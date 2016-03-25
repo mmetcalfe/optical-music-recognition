@@ -18,6 +18,9 @@ import LinearAlgebra.Matrix.Unsafe as UnsafeMatrix
 import Random
 import Random.Distributions
 
+import Array
+import Ransac
+
 type alias CubicBezierSpline = (Vec2, Vec2, Vec2, Vec2)
 
 bezier2 : (Float, Float, Float) -> Float -> Float
@@ -64,25 +67,27 @@ cubicBases func a b c d =
   in
     (fnX, fnY)
 
-cubicBezier : Vec2 -> Vec2 -> Vec2 -> Vec2 -> Float -> Vec2
-cubicBezier a b c d t =
+cubicBezier : CubicBezierSpline -> Float -> Vec2
+cubicBezier spline t =
   let
+    (a, b, c, d) = spline
     (fnX, fnY) = cubicBases bezier3 a b c d
   in
     Vector2.vec2 (fnX t) (fnY t)
 
-cubicBezierTangent : Vec2 -> Vec2 -> Vec2 -> Vec2 -> Float -> Vec2
-cubicBezierTangent a b c d t =
+cubicBezierTangent : CubicBezierSpline -> Float -> Vec2
+cubicBezierTangent spline t =
   let
+    (a, b, c, d) = spline
     (fnX, fnY) = cubicBases bezier3' a b c d
   in
     Vector2.normalize <| Vector2.vec2 (fnX t) (fnY t)
 
 cubicBezierFrame : CubicBezierSpline -> Float -> TransSE2
-cubicBezierFrame (a, b, c, d) t =
+cubicBezierFrame spline t =
   let
-    point = cubicBezier a b c d t
-    tangent = cubicBezierTangent a b c d t
+    point = cubicBezier spline t
+    tangent = cubicBezierTangent spline t
     (tx, ty) = Vector2.toTuple tangent
     -- normal = Vector2.vec2 ty -tx
     angle = Angle.vectorToBearing tangent
@@ -157,9 +162,9 @@ drawParametricFrames func samples range =
 
 -- drawCubicBezier : CubicBezierSpline -> GfxC.Form
 drawCubicBezier : CubicBezierSpline -> GfxC.Path
-drawCubicBezier (a, b, c, d) =
+drawCubicBezier spline =
   let
-    func = cubicBezier a b c d
+    func = cubicBezier spline
   in
     drawParametric func 100 (0, 1)
 
@@ -260,3 +265,45 @@ fitCubicBezierToPoints points =
     pLists = UnsafeMatrix.toLists p
   in
     cubicBezierFromLists pLists
+
+pointsNearCubicBezier : Float -> Array.Array Vec2 -> CubicBezierSpline -> List Vec2
+-- TODO: Use a faster method for production code.
+-- e.g. http://www.vision.caltech.edu/malaa/publications/aly08realtime.pdf
+pointsNearCubicBezier maxDist data spline =
+  let
+    times = linspace 50 (0, 1)
+    samples = List.map (cubicBezier spline) times
+    sampleDist pt =
+      let
+        dists = List.map (Vector2.distance pt) samples
+      in
+        List.minimum dists
+    isNearSpline pt =
+      case sampleDist pt of
+        Just dist ->
+          dist < maxDist
+        Nothing ->
+          False
+  in
+    Array.toList <| Array.filter isNearSpline data
+
+fitCubicBezierRansac : Random.Seed -> List Vec2 -> (Maybe CubicBezierSpline, Random.Seed)
+fitCubicBezierRansac seed points =
+  let
+    numPoints = List.length points
+    inlierRatio = 0.2
+    model =
+      { fitInliers = fitCubicBezierToPoints
+      , numRequired = 5
+      , findInliers = pointsNearCubicBezier
+      , fitModel = Just << fitCubicBezierToPoints
+      }
+    params =
+      { numIterations = 100
+      , maxDist = 7
+      , minInliers = round <| inlierRatio * toFloat numPoints
+      }
+    data = Array.fromList points
+    splineGen = Ransac.ransac model params data
+  in
+    Random.generate splineGen seed

@@ -15,10 +15,10 @@ import Random.Distributions
 -- Graphics
 import Color
 import Graphics.Collage as GfxC
-import Graphics.Element as GfxE
-import Transform2D
+-- import Graphics.Element as GfxE
+-- import Transform2D
 import Text
-import LinearAlgebra.TransformSE2 as TransformSE2 exposing (TransSE2)
+-- import LinearAlgebra.TransformSE2 as TransformSE2 exposing (TransSE2)
 import Math.Vector2 as Vector2 exposing (Vec2)
 -- import LinearAlgebra.Matrix2 as Matrix2 exposing (Mat2)
 
@@ -35,7 +35,7 @@ type alias Model =
     { points : List Vec2
     , offsetPoints : List Vec2
     , spline : Curves.CubicBezierSpline
-    , bestFitSpline : Curves.CubicBezierSpline
+    , bestFitSpline : Maybe Curves.CubicBezierSpline
     , mousePos : Vec2
     , dragging : Bool
     , canvasWidth : Int
@@ -61,7 +61,7 @@ generateValue seed =
 -- onWindowDims = Signal.map (\dims -> WindowDims dims) Window.dimensions
 
 onTick : Signal Action
-onTick = Signal.map2 (\time dims -> Tick time dims) (Time.fps 1) Window.dimensions
+onTick = Signal.map2 (\time dims -> Tick time dims) (Time.fps 2) Window.dimensions
 -- onTick = Signal.map (\time -> Tick time) (Time.fps 100)
 -- onTick = Signal.map (\time -> Tick time) (Time.every Time.millisecond)
 
@@ -85,7 +85,7 @@ initialModel =
   { points = points
   ,  offsetPoints = []
   ,  spline = Curves.cubicBezierFromPoints points
-  ,  bestFitSpline = Curves.cubicBezierFromPoints points
+  ,  bestFitSpline = Nothing
   ,  mousePos = Vector2.vec2 0 0
   ,  dragging = False
   ,  canvasWidth = 600
@@ -152,19 +152,36 @@ update action model =
 --     windowDims = dims
 --   }
 
+randomPointsInWindow : Int -> (Int, Int) -> Random.Generator (List Vec2)
+randomPointsInWindow num dims =
+  let
+    (ww, wh) = dims
+    val = Random.float -0.5 0.5
+    unscaled = Random.pair val val
+    scaleToWindow (x, y) =
+      Vector2.fromTuple (x * toFloat ww, y * toFloat wh)
+    windowPoint = Random.map scaleToWindow unscaled
+  in
+    Random.list num windowPoint
+
 tickUpdate : Float -> (Int, Int) -> Model -> Model
 tickUpdate time dims model =
   let
     spline = Curves.cubicBezierFromPoints model.points
     frameFunc = Curves.cubicBezierFrame spline
     numOffsets = 50
-    (offsetPoints, seed') = Curves.randomOffsets (0, 1) 10 frameFunc numOffsets model.seed
-    bestFitSpline = Curves.fitCubicBezierToPoints offsetPoints
+    numNoisePoints = numOffsets
+    offsetStdDev = 5
+    (offsetPoints, seed') = Curves.randomOffsets (0, 1) offsetStdDev frameFunc numOffsets model.seed
+    (noisePoints, seed'') = Random.generate (randomPointsInWindow numNoisePoints dims) seed'
+    allPoints = offsetPoints ++ noisePoints
+    -- bestFitSpline = Just Curves.fitCubicBezierToPoints offsetPoints
+    (bestFitSpline, newSeed) = Curves.fitCubicBezierRansac seed'' allPoints
   in { model |
       -- values = List.take 500 <| value :: model.values,
-      seed = seed',
+      seed = newSeed,
       windowDims = dims,
-      offsetPoints = offsetPoints,
+      offsetPoints = allPoints,
       spline = spline,
       bestFitSpline = bestFitSpline
     }
@@ -270,10 +287,16 @@ view address model =
     -- points = List.indexedMap drawPoint model.points
     randomOffsetPoints = List.map (colPoint (Color.hsl 0 0 0.8)) model.offsetPoints
     spline = Curves.cubicBezierFromPoints model.points
+    bestFitCurve =
+      case model.bestFitSpline of
+        Just bestFitSpline ->
+          Curves.debugDrawCubicBezier (Color.hsl (0.6*(2*pi)) 0.8 0.8) bestFitSpline
+        Nothing ->
+          GfxC.group []
     curve =
           GfxC.group <| randomOffsetPoints ++ [
             Curves.debugDrawCubicBezier (Color.hsl 0 0.8 0.6) spline,
-            Curves.debugDrawCubicBezier (Color.hsl (0.6*(2*pi)) 0.8 0.8) model.bestFitSpline
+            bestFitCurve
           ]
     forms = [curve] -- :: points
     (cw, ch) = model.windowDims
