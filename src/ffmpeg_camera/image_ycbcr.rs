@@ -9,8 +9,8 @@ use std::fs::OpenOptions;
 
 extern crate ffmpeg_sys;
 extern crate libc;
-use ffmpeg_utils;
-use ffmpeg_utils::FfmpegError;
+use ffmpeg_camera::ffmpeg_utils;
+use ffmpeg_camera::ffmpeg_utils::FfmpegError;
 
 pub struct Pixel {
     pub y : u8,

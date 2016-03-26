@@ -4,10 +4,10 @@ use std::ptr;
 use std::mem;
 use std::ffi::CString;
 
-use image_ycbcr; // ::Image;
+use ffmpeg_camera::image_ycbcr; // ::Image;
 
-use ffmpeg_utils;
-use ffmpeg_utils::FfmpegError;
+use ffmpeg_camera::ffmpeg_utils;
+use ffmpeg_camera::ffmpeg_utils::FfmpegError;
 
 pub struct FfmpegCamera {
     stream_index : usize,

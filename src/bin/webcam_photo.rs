@@ -1,7 +1,8 @@
-pub mod ffmpeg_camera;
-pub mod ffmpeg_utils;
-pub mod image_ycbcr;
+extern crate optical_music_recognition;
 
+use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
+// use optical_music_recognition::ffmpeg_camera::ffmpeg_utils;
+// use optical_music_recognition::ffmpeg_camera::image_ycbcr;
 
 fn main() {
 
