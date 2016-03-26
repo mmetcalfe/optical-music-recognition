@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate glium;
-extern crate image;
+// extern crate image;
 
 extern crate optical_music_recognition;
 use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
@@ -19,8 +19,11 @@ struct Vertex {
 implement_vertex!(Vertex, position, tex_coords);
 
 fn main() {
+    // let mut camera =
+    //     ffmpeg_camera::FfmpegCamera::get_default()
+    //         .expect("Failed to open camera.");
     let mut camera =
-        ffmpeg_camera::FfmpegCamera::get_default()
+        ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (1280, 720))
             .expect("Failed to open camera.");
 
     let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
@@ -33,10 +36,15 @@ fn main() {
     // let texture = glium::texture::Texture2d::new(&display, image).unwrap();
 
 
-    let vertex1 = Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 0.0] };
-    let vertex2 = Vertex { position: [ 0.0,  0.5], tex_coords: [0.0, 1.0] };
-    let vertex3 = Vertex { position: [ 0.5, -0.25], tex_coords: [1.0, 0.0] };
-    let shape = vec![vertex1, vertex2, vertex3];
+    let v = 0.95;
+    let vertex1 = Vertex { position: [-v, -v], tex_coords: [1.0, 1.0] };
+    let vertex2 = Vertex { position: [ v, -v], tex_coords: [0.0, 1.0] };
+    let vertex3 = Vertex { position: [ -v,  v], tex_coords: [1.0, 0.0] };
+    let vertex4 = Vertex { position: [ v, v], tex_coords: [0.0, 0.0] };
+    let shape = vec![
+        vertex1, vertex2, vertex3,
+        vertex3, vertex4, vertex2,
+    ];
 
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
@@ -59,34 +67,51 @@ fn main() {
         out vec4 color;
         uniform sampler2D tex;
         void main() {
-            color = texture(tex, v_tex_coords);
+            vec4 uyvy = texture(tex, v_tex_coords);
+
+            // From https://en.wikipedia.org/wiki/YCbCr#JPEG_conversion
+            // (it's close enough)
+            float y = uyvy.y;
+            float cb = uyvy.x;
+            float cr = uyvy.z;
+
+            float r = y + 1.402*(cr - 0.5);
+            float g = y - 0.34414*(cb-0.5) - 0.71414*(cr-0.5);
+            float b = y + 1.772*(cb-0.5);
+
+            color = vec4(r, g, b, 1);
+
+            // color = texture(tex, v_tex_coords);
         }
     "#;
 
     let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
-     let mut t = -0.5;
+    //  let mut t = -0.5;
+     let t = 0.0;
 
     loop {
         let webcam_frame = camera.get_image().unwrap();
         let cow: Cow<[_]> = Cow::Owned(webcam_frame.data);
         // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
+        let img_w = webcam_frame.width as u32 / 2;
+        let img_h = webcam_frame.height as u32;
         let raw_image = glium::texture::RawImage2d {
             data: cow,
-            width: webcam_frame.width as u32,
-            height: webcam_frame.height as u32,
-            format: glium::texture::ClientFormat::U8U8
+            width: img_w,
+            height: img_h,
+            format: glium::texture::ClientFormat::U8U8U8U8
         };
         let texture = glium::texture::Texture2d::new(&display, raw_image).unwrap();
 
         // image.save_pgm("image.pgm").unwrap();
         // image.save_jpeg("image.jpg").unwrap();
 
-        // we update `t`
-        t += 0.0002;
-        if t > 0.5 {
-            t = -0.5;
-        }
+        // // we update `t`
+        // t += 0.0002;
+        // if t > 0.5 {
+        //     t = -0.5;
+        // }
 
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
