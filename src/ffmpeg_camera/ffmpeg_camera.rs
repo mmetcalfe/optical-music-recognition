@@ -32,7 +32,7 @@ impl Drop for FfmpegCamera {
 }
 
 impl FfmpegCamera {
-    unsafe fn get_default_format_context(video_filename : &str, frame_dims : (usize, usize)) -> Result<*mut ffmpeg_sys::AVFormatContext, FfmpegError> {
+    unsafe fn get_default_format_context(device_filename_str : &str, framerate_str : &str, frame_dims : (usize, usize)) -> Result<*mut ffmpeg_sys::AVFormatContext, FfmpegError> {
 
         // Get the avfoundation format:
         let format_name = CString::new("avfoundation").unwrap();
@@ -44,7 +44,7 @@ impl FfmpegCamera {
         // Note: avdevice_list_input_sources is not implemented for avfoundation.
         // Instead, run the following command to find an appropriate device name.
         // $ ffmpeg -f avfoundation -list_devices true -i "default" -v 1000
-        let device_filename_str = format!("{}:", video_filename);
+        // let device_filename_str = format!("{}:", video_filename);
 
         let video_size_str = format!("{}x{}", frame_dims.0, frame_dims.1);
         let device_filename = CString::new(device_filename_str).unwrap();
@@ -56,7 +56,8 @@ impl FfmpegCamera {
             // ("framerate", "14.999993", 0),
             // ("video_size", "1280x720", 0),
             // ("video_size", "1920x1080", 0),
-            ("framerate", "30.000030", 0),
+            // ("framerate", "30.000030", 0),
+            ("framerate", framerate_str, 0),
             ("video_size", &video_size_str, 0),
             // ("capture_cursor", "1", 0),
             // ("capture_mouse_clicks", "1", 0),
@@ -270,12 +271,7 @@ impl FfmpegCamera {
         })
     }
 
-    pub fn get_default() -> Result<FfmpegCamera, FfmpegError> {
-        let video_size = (1280, 720);
-        // let video_filename = "default";
-        let video_filename = "HD Pro Webcam C920";
-        // let video_filename = "FaceTime HD Camera (Built-in)";
-        // let video_filename = "Capture screen 0";
+    pub fn get_camera(video_filename : &str, framerate_str : &str, video_size : (usize, usize)) -> Result<FfmpegCamera, FfmpegError> {
 
         let mut camera = FfmpegCamera {
             stream_index: 0,
@@ -289,7 +285,8 @@ impl FfmpegCamera {
             ffmpeg_sys::avdevice_register_all();
             ffmpeg_sys::av_register_all();
 
-            let format_context = try!(Self::get_default_format_context(video_filename, video_size));
+            let device_filename_str = format!("{}:", video_filename);
+            let format_context = try!(Self::get_default_format_context(&device_filename_str, framerate_str, video_size));
 
             // Find the best stream:
             let kind = ffmpeg_sys::AVMEDIA_TYPE_VIDEO;
@@ -317,7 +314,7 @@ impl FfmpegCamera {
             println!("av_dump_format");
             let index = 0;
             let is_output = 0;
-            let device_filename = CString::new("HD Pro Webcam C920:").unwrap();
+            let device_filename = CString::new(device_filename_str).unwrap();
             ffmpeg_sys::av_dump_format(format_context, index, device_filename.as_ptr(), is_output);
 
             let frame_raw = ffmpeg_sys::av_frame_alloc();
@@ -334,4 +331,19 @@ impl FfmpegCamera {
 
         Ok(camera)
     }
+
+
+    pub fn get_default() -> Result<FfmpegCamera, FfmpegError> {
+        let video_size = (640, 480);
+        // let video_size = (1280, 720);
+        // let video_filename = "default";
+        let video_filename = "default";
+        // let video_filename = "FaceTime HD Camera (Built-in)";
+        // let video_filename = "Capture screen 0";
+        // let framerate = "30.000030";
+        let framerate = "29.97";
+
+        Self::get_camera(&video_filename, framerate, video_size)
+    }
+
 }

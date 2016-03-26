@@ -6,7 +6,9 @@ use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
 
 fn main() {
 
-    let mut camera = ffmpeg_camera::FfmpegCamera::get_default().expect("Failed to open camera.");
+    let mut camera =
+        ffmpeg_camera::FfmpegCamera::get_default()
+            .expect("Failed to open camera.");
 
     let image = camera.get_image().unwrap();
 
