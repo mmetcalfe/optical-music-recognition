@@ -6,6 +6,12 @@ authors = ["Mitchell Metcalfe <mitchell.s.metcalfe@gmail.com>"]
 [dependencies]
 libc = "0.2"
 glium = "*"
+
+# piston2d-graphics = "*"
+# piston2d-glium_graphics = "*"
+# piston = "*"
+# piston_window = "*"
+# pistoncore-glutin_window = "*"
 # image = "*"
 
 # ffmpeg-sys = "2.8.6-1" # Problems due to bad config detection.
