@@ -59,13 +59,14 @@ fn main() {
         for x in (0..webcam_frame.width).filter(|x| x % 10 == 0) {
             let scanner = omr::scanning::StaffScanner::new(&webcam_frame, [x, 0]);
             // println!("Crosses:");
-            for cross in scanner {
+            for (i, cross) in scanner.filter(|c| c.is_plausible()).enumerate() {
+                let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
                 // println!("{:?}", cross);
                 for span in cross.spans() {
                     let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
                     let p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
                     let p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
-                    draw_ctx.draw_line(&mut target, p1, p2, pix_w, [0.0, 0.0, 0.0, 0.0]);
+                    draw_ctx.draw_line(&mut target, p1, p2, pix_w, col);
                 }
             }
         }

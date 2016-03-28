@@ -32,6 +32,52 @@ impl StaffCross {
     pub fn spans(&self) -> self::core::slice::Iter<[usize; 2]> {
         self.spans.iter()
     }
+
+    // Returns whether the sequence of spans is regular enough that it could plausibly be a
+    // cross-section of a staff.
+    pub fn is_plausible(&self) -> bool {
+        let mut len_sum = 0;
+        let mut gap_sum = 0;
+        let mut last_end = 0;
+        for span in self.spans() {
+            if last_end > 0 {
+                gap_sum += span[0] - last_end;
+            }
+
+            len_sum += span[1] - span[0];
+
+            last_end = span[1];
+        }
+
+        let avg_gap = gap_sum as f32 / 4.0;
+        let avg_len = len_sum as f32 / 5.0;
+
+        // If stafflines are thicker than the spaces between them.
+        if avg_len > avg_gap {
+            return false;
+        }
+
+        let mut last_end = 0;
+        for span in self.spans() {
+            if last_end > 0 {
+                let gap_len = span[0] - last_end;
+                let gap_rel_err = (gap_len as f32 - avg_gap).abs() / avg_gap;
+                if gap_rel_err > 0.5 {
+                    return false;
+                }
+            }
+
+            let curr_len = span[1] - span[0];
+            let len_rel_err = (curr_len as f32 - avg_len).abs() / avg_len;
+            if len_rel_err > 0.5 {
+                return false;
+            }
+
+            last_end = span[1];
+        }
+
+        true
+    }
 }
 
 // Scans across an image, returning a sequence of detected StaffPoints.
