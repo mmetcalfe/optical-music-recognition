@@ -12,12 +12,14 @@ extern crate libc;
 use ffmpeg_camera::ffmpeg_utils;
 use ffmpeg_camera::ffmpeg_utils::FfmpegError;
 
+#[derive(Copy, Clone)]
 pub struct Pixel {
     pub y : u8,
     pub cb : u8,
     pub cr : u8,
 }
 
+#[derive(Clone)]
 pub struct Image {
     pub width : usize, // width in pixels
     pub height : usize, // height in pixels
@@ -26,7 +28,16 @@ pub struct Image {
 
 impl Image {
 
+    pub fn contains(&self, col : usize, row : usize) -> bool {
+         col < self.width &&
+         row < self.height
+    }
+
     pub fn index(&self, col : usize, row : usize) -> Pixel {
+        if !self.contains(col, row) {
+            panic!("Image index out of bounds.");
+        }
+
         // u y v y u y v y ...
         let row_offset = row * self.width * 2;
         let y_i = row_offset + col*2 + 1;

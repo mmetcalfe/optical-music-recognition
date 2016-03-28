@@ -7,6 +7,7 @@ use std::f32;
 extern crate optical_music_recognition;
 use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
 use optical_music_recognition::drawing;
+use optical_music_recognition::omr;
 
 // use std::io::Cursor;
 use glium::DisplayBuild;
@@ -35,6 +36,13 @@ fn main() {
     loop {
         let webcam_frame = camera.get_image().unwrap();
 
+        let scanner = omr::scanning::StaffScanner::new(&webcam_frame, [256, 0]);
+
+        println!("Crosses:");
+        for cross in scanner {
+            println!("{:?}", cross);
+        }
+
         // webcam_frame.save_pgm("image.pgm").unwrap();
         // webcam_frame.save_jpeg("image.jpg").unwrap();
 
@@ -43,11 +51,11 @@ fn main() {
 
         // draw_ctx.draw_image(&mut target, &webcam_frame);
 
-        let rect = drawing::rectangle_buffer::RotatedRectangle {
-            position: [0.5, 0.0],
-            size: [1.0, 0.25],
-            angle: f32::consts::PI/4.0,
-        };
+        // let rect = drawing::rectangle_buffer::RotatedRectangle {
+        //     position: [0.5, 0.0],
+        //     size: [1.0, 0.25],
+        //     angle: f32::consts::PI/4.0,
+        // };
         // draw_ctx.draw_rectangle(&mut target, &rect, [1.0, 0.0, 1.0, 0.0]);
 
         draw_ctx.draw_line(&mut target, [-0.5, 0.5], [0.0, -0.5], 0.01, [1.0, 0.0, 1.0, 0.0]);
