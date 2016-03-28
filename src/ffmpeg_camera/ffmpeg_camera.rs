@@ -336,7 +336,7 @@ impl FfmpegCamera {
     pub fn get_default() -> Result<FfmpegCamera, FfmpegError> {
         let video_size = (640, 480);
         // let video_size = (1280, 720);
-        // let video_filename = "default";
+        // let video_filename = "HD Pro Webcam C920";
         let video_filename = "default";
         // let video_filename = "FaceTime HD Camera (Built-in)";
         // let video_filename = "Capture screen 0";

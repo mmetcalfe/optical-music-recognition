@@ -2,7 +2,7 @@
 extern crate glium;
 // extern crate image;
 
-use std::f32;
+// use std::f32;
 
 extern crate optical_music_recognition;
 use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
@@ -17,8 +17,12 @@ fn main() {
     // let mut camera =
     //     ffmpeg_camera::FfmpegCamera::get_default()
     //         .expect("Failed to open camera.");
+    // let mut camera =
+    //     ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (1280, 720))
+    //         .expect("Failed to open camera.");
+
     let mut camera =
-        ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (1280, 720))
+        ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (1280, 720))
             .expect("Failed to open camera.");
 
     let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
@@ -36,20 +40,13 @@ fn main() {
     loop {
         let webcam_frame = camera.get_image().unwrap();
 
-        let scanner = omr::scanning::StaffScanner::new(&webcam_frame, [256, 0]);
-
-        println!("Crosses:");
-        for cross in scanner {
-            println!("{:?}", cross);
-        }
-
         // webcam_frame.save_pgm("image.pgm").unwrap();
         // webcam_frame.save_jpeg("image.jpg").unwrap();
 
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        // draw_ctx.draw_image(&mut target, &webcam_frame);
+        draw_ctx.draw_image(&mut target, &webcam_frame);
 
         // let rect = drawing::rectangle_buffer::RotatedRectangle {
         //     position: [0.5, 0.0],
@@ -57,6 +54,26 @@ fn main() {
         //     angle: f32::consts::PI/4.0,
         // };
         // draw_ctx.draw_rectangle(&mut target, &rect, [1.0, 0.0, 1.0, 0.0]);
+
+        // let x = 256;
+        for x in (0..webcam_frame.width).filter(|x| x % 10 == 0) {
+            let scanner = omr::scanning::StaffScanner::new(&webcam_frame, [x, 0]);
+            // println!("Crosses:");
+            for cross in scanner {
+                // println!("{:?}", cross);
+                for span in cross.spans() {
+                    let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
+                    let p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
+                    let p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
+                    draw_ctx.draw_line(&mut target, p1, p2, pix_w, [0.0, 0.0, 0.0, 0.0]);
+                }
+            }
+        }
+
+        // for cross in scanner {
+        //     println!("{:?}", cross);
+        // }
+
 
         draw_ctx.draw_line(&mut target, [-0.5, 0.5], [0.0, -0.5], 0.01, [1.0, 0.0, 1.0, 0.0]);
         draw_ctx.draw_line(&mut target, [-0.5, 0.0], [0.5, 1.0], 0.02, [1.0, 1.0, 0.0, 0.0]);

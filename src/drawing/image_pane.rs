@@ -57,7 +57,8 @@ impl<'a> ImagePane<'a> {
     }
 
     pub fn new(display : &glium::Display) -> ImagePane {
-        let v = 0.95;
+        // let v = 0.95;
+        let v = 1.0;
         let vertex1 = Vertex { position: [-v, -v], tex_coords: [1.0, 1.0] };
         let vertex2 = Vertex { position: [ v, -v], tex_coords: [0.0, 1.0] };
         let vertex3 = Vertex { position: [-v, v], tex_coords: [1.0, 0.0] };

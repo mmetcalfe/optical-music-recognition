@@ -28,6 +28,24 @@ pub struct Image {
 
 impl Image {
 
+    pub fn opengl_coords_for_index(&self, index : [usize; 2]) -> [f32; 2] {
+        let px = index[0];
+        let py = index[1];
+
+        // // Half-pixel offsets:
+        // let ox = 0.5 / width;
+        // let oy = 0.5 / height;
+
+        // Normalised coordinates in [0, 1]:
+        let nx = (px as f32 + 0.5) / self.width as f32;
+        let ny = (py as f32 + 0.5) / self.height as f32;
+
+        // OpenGL coordinates in [-1, 1]:
+        let rx = nx * 2.0 - 1.0;
+        let ry = ny * 2.0 - 1.0;
+        [-rx, -ry]
+    }
+
     pub fn contains(&self, col : usize, row : usize) -> bool {
          col < self.width &&
          row < self.height

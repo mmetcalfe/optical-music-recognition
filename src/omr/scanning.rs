@@ -1,5 +1,8 @@
 use ffmpeg_camera::image_ycbcr;
 
+extern crate core;
+// use self::core::slice::Iter;
+
 // Represents a the intersection of a straight line with a set of 5 staff lines.
 // Stores the coordinates of each of the 5 line intersections in image coordinates.
 #[derive(Debug, Clone)]
@@ -24,6 +27,10 @@ impl StaffCross {
 
     fn is_complete(&self) -> bool {
         self.spans.len() >= 5
+    }
+
+    pub fn spans(&self) -> self::core::slice::Iter<[usize; 2]> {
+        self.spans.iter()
     }
 }
 

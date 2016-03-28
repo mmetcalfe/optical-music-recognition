@@ -5,7 +5,7 @@ use drawing::image_pane::ImagePane;
 use ffmpeg_camera::image_ycbcr;
 use glium;
 
-use std::f32;
+// use std::f32;
 
 pub struct DrawingContext<'a> {
     image_pane : ImagePane<'a>,
