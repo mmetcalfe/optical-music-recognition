@@ -41,14 +41,18 @@ fn main() {
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        draw_ctx.draw_image(&mut target, &webcam_frame);
+        // draw_ctx.draw_image(&mut target, &webcam_frame);
 
         let rect = drawing::rectangle_buffer::RotatedRectangle {
             position: [0.5, 0.0],
             size: [1.0, 0.25],
             angle: f32::consts::PI/4.0,
         };
-        draw_ctx.draw_rectangle(&mut target, &rect, [1.0, 0.0, 1.0, 0.0]);
+        // draw_ctx.draw_rectangle(&mut target, &rect, [1.0, 0.0, 1.0, 0.0]);
+
+        draw_ctx.draw_line(&mut target, [-0.5, 0.5], [0.0, -0.5], 0.01, [1.0, 0.0, 1.0, 0.0]);
+        draw_ctx.draw_line(&mut target, [-0.5, 0.0], [0.5, 1.0], 0.02, [1.0, 1.0, 0.0, 0.0]);
+        draw_ctx.draw_line(&mut target, [0.5, 1.0], [-0.5, 0.0], 0.01, [0.0, 1.0, 0.0, 0.0]);
 
         target.finish().unwrap();
 
