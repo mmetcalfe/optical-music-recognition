@@ -28,8 +28,9 @@ fn main() {
     // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
     // let texture = glium::texture::Texture2d::new(&display, image).unwrap();
 
-    let img_pane = drawing::image_pane::ImagePane::new(&display);
-    let rect_buff = drawing::rectangle_buffer::RectangleBuffer::new(&display);
+    let draw_ctx = drawing::context::DrawingContext::new(&display);
+    // let img_pane = drawing::image_pane::ImagePane::new(&display);
+    // let rect_buff = drawing::rectangle_buffer::RectangleBuffer::new(&display);
 
     loop {
         let webcam_frame = camera.get_image().unwrap();
@@ -40,14 +41,14 @@ fn main() {
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        img_pane.draw_image(&mut target, &webcam_frame);
+        draw_ctx.draw_image(&mut target, &webcam_frame);
 
         let rect = drawing::rectangle_buffer::RotatedRectangle {
             position: [0.5, 0.0],
             size: [1.0, 0.25],
             angle: f32::consts::PI/4.0,
         };
-        rect_buff.draw_rectangle(&mut target, &rect, [1.0, 0.0, 1.0, 0.0]);
+        draw_ctx.draw_rectangle(&mut target, &rect, [1.0, 0.0, 1.0, 0.0]);
 
         target.finish().unwrap();
 
