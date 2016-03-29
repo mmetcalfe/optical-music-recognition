@@ -4,6 +4,7 @@ use drawing::image_pane::ImagePane;
 
 use ffmpeg_camera::image_ycbcr;
 use glium;
+use nalgebra as na;
 
 // use std::f32;
 
@@ -28,7 +29,7 @@ impl<'a> DrawingContext<'a> {
         self.image_pane.draw_image(target, image)
     }
 
-    pub fn draw_line(&self, target : &mut glium::Frame, p1 : [f32; 2], p2 : [f32; 2], lw : f32, colour : [f32; 4]) {
+    pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
         let x1 = p1[0];
         let y1 = p1[1];
         let x2 = p2[0];

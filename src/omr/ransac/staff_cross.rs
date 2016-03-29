@@ -4,7 +4,7 @@ use omr::scanning::StaffCross;
 use nalgebra as na;
 use geometry as gm;
 
-struct StaffCrossLineModel;
+pub struct StaffCrossLineModel;
 
 impl RansacModel<gm::Line, StaffCross> for StaffCrossLineModel {
 

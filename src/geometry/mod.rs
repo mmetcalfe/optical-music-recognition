@@ -2,8 +2,8 @@ use nalgebra as na;
 use nalgebra::Norm;
 
 pub struct Line {
-    a: na::Vec2<f32>,
-    b: na::Vec2<f32>,
+    pub a: na::Vec2<f32>,
+    pub b: na::Vec2<f32>,
 }
 
 impl Line {
@@ -19,8 +19,10 @@ impl Line {
         let dir = self.a - self.b;
         let norm = na::Vec2::new(dir[1], -dir[0]);
 
-        let dot = na::dot(&dir, &norm);
         let norm_len = norm.norm();
+
+        let ap = *point - self.a;
+        let dot = na::dot(&ap, &norm);
 
         let dist = (dot).abs() / norm_len;
 

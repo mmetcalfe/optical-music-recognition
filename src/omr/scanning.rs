@@ -12,7 +12,7 @@ pub struct StaffCross {
     // as the starting and ending y-coordinate. (later we'll either store start+stop points, or add
     // a transform from SE(2) to represent the scan coorinate system)
 
-    x : usize,
+    pub x : usize,
     spans : Vec<[usize; 2]>,
 }
 
@@ -150,4 +150,18 @@ impl<'a> Iterator for StaffScanner<'a> {
             }
         }
     }
+}
+
+pub fn scan_entire_image(image: &image_ycbcr::Image, step: usize) -> Vec<StaffCross> {
+    let mut results = Vec::new();
+
+    for x in (0..image.width).filter(|x| x % step == 0) {
+        let scanner = StaffScanner::new(&image, [x, 0]);
+
+        let crosses = scanner.filter(|c| c.is_plausible());
+
+        results.extend(crosses)
+    }
+
+    results
 }

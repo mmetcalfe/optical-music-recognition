@@ -11,6 +11,7 @@ extern crate ffmpeg_sys;
 extern crate libc;
 use ffmpeg_camera::ffmpeg_utils;
 use ffmpeg_camera::ffmpeg_utils::FfmpegError;
+use nalgebra as na;
 
 #[derive(Copy, Clone)]
 pub struct Pixel {
@@ -28,22 +29,29 @@ pub struct Image {
 
 impl Image {
 
-    pub fn opengl_coords_for_index(&self, index : [usize; 2]) -> [f32; 2] {
-        let px = index[0];
-        let py = index[1];
+    pub fn opengl_coords_for_point(&self, point: na::Vec2<f32>) -> na::Vec2<f32> {
+        let px = point[0];
+        let py = point[1];
 
         // // Half-pixel offsets:
         // let ox = 0.5 / width;
         // let oy = 0.5 / height;
 
         // Normalised coordinates in [0, 1]:
-        let nx = (px as f32 + 0.5) / self.width as f32;
-        let ny = (py as f32 + 0.5) / self.height as f32;
+        let nx = (px + 0.5) / self.width as f32;
+        let ny = (py + 0.5) / self.height as f32;
 
         // OpenGL coordinates in [-1, 1]:
         let rx = nx * 2.0 - 1.0;
         let ry = ny * 2.0 - 1.0;
-        [rx, -ry]
+        na::Vec2::new(rx, -ry)
+    }
+
+    pub fn opengl_coords_for_index(&self, index: [usize; 2]) -> na::Vec2<f32> {
+        let px = index[0] as f32;
+        let py = index[1] as f32;
+
+        self.opengl_coords_for_point(na::Vec2::new(px, py))
     }
 
     pub fn contains(&self, col : usize, row : usize) -> bool {

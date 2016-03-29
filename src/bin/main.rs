@@ -9,7 +9,8 @@ extern crate optical_music_recognition;
 use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
 use optical_music_recognition::drawing;
 use optical_music_recognition::omr;
-
+use optical_music_recognition::geometry;
+use optical_music_recognition::omr::ransac::staff_cross::StaffCrossLineModel;
 // use std::io::Cursor;
 use glium::DisplayBuild;
 use glium::Surface;
@@ -49,48 +50,40 @@ fn main() {
 
         draw_ctx.draw_image(&mut target, &webcam_frame);
 
-        // let rect = drawing::rectangle_buffer::RotatedRectangle {
-        //     position: [0.5, 0.0],
-        //     size: [1.0, 0.25],
-        //     angle: f32::consts::PI/4.0,
-        // };
-        // draw_ctx.draw_rectangle(&mut target, &rect, [1.0, 0.0, 1.0, 0.0]);
+        // Scan entire image for StaffCross points:
+        let cross_points = omr::scanning::scan_entire_image(&webcam_frame, 10);
 
+        // Draw detected StaffCross points:
         // let x = 256;
-        for x in (0..webcam_frame.width).filter(|x| x % 10 == 0) {
-            let scanner = omr::scanning::StaffScanner::new(&webcam_frame, [x, 0]);
-            // println!("Crosses:");
-            for (i, cross) in scanner.filter(|c| c.is_plausible()).enumerate() {
-                // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
-                let col = [1.0, 0.0, 0.0, 1.0];
-                // println!("{:?}", cross);
-                for span in cross.spans() {
-                    let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
-                    let p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
-                    let p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
-                    draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
-                }
+        for (i, cross) in cross_points.iter().enumerate() {
+            // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
+            let col = [1.0, 0.0, 0.0, 1.0];
+            let x = cross.x;
+            // println!("{:?}", cross);
+            for span in cross.spans() {
+                let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
+                let p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
+                let p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
+                draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
             }
         }
 
-        // Scan entire image for StaffCross points:
-
-        // Draw detected StaffCross points:
-
         // Run RANSAC on the StaffCross points to find a line:
+        let params = omr::ransac::RansacParams {
+            num_iterations: 500,
+            max_distance: 10.0,
+            min_inliers: 5,
+        };
+        let maybe_line = omr::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
 
         // Draw the detected line:
-
-
-
-        // for cross in scanner {
-        //     println!("{:?}", cross);
-        // }
-
-
-        // draw_ctx.draw_line(&mut target, [-0.5, 0.5], [0.0, -0.5], 0.01, [1.0, 0.0, 1.0, 0.0]);
-        // draw_ctx.draw_line(&mut target, [-0.5, 0.0], [0.5, 1.0], 0.02, [1.0, 1.0, 0.0, 0.0]);
-        // draw_ctx.draw_line(&mut target, [0.5, 1.0], [-0.5, 0.0], 0.01, [0.0, 1.0, 0.0, 0.0]);
+        if let Some(line) = maybe_line {
+            let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
+            let col = [0.0, 0.0, 1.0, 1.0];
+            let p1 = webcam_frame.opengl_coords_for_point(line.a);
+            let p2 = webcam_frame.opengl_coords_for_point(line.b);
+            draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
+        }
 
         target.finish().unwrap();
 
