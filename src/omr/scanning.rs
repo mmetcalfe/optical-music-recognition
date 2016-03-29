@@ -1,4 +1,5 @@
 use ffmpeg_camera::image_ycbcr;
+use nalgebra as na;
 
 extern crate core;
 // use self::core::slice::Iter;
@@ -11,17 +12,28 @@ pub struct StaffCross {
     // as the starting and ending y-coordinate. (later we'll either store start+stop points, or add
     // a transform from SE(2) to represent the scan coorinate system)
 
+    x : usize,
     spans : Vec<[usize; 2]>,
 }
 
 impl StaffCross {
     fn empty() -> StaffCross {
         StaffCross {
+            x: 0,
             spans: Vec::new(),
         }
     }
 
+    pub fn centre(&self) -> na::Vec2<f32> {
+        let sum_y : f32 = self.spans.iter().fold(0.0, |a, s| a + (s[0] + s[1]) as f32 / 2.0);
+        let avg_y = sum_y / self.spans.len() as f32;
+        let avg_x = self.x as f32;
+
+        na::Vec2::new(avg_x, avg_y)
+    }
+
     fn add(&mut self, point_a : [usize; 2], point_b : [usize; 2]) {
+        self.x = point_a[0];
         self.spans.push([point_a[1], point_b[1]])
     }
 

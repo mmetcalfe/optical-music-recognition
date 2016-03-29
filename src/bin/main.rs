@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate glium;
+extern crate nalgebra as na;
 // extern crate image;
 
 // use std::f32;
@@ -60,25 +61,36 @@ fn main() {
             let scanner = omr::scanning::StaffScanner::new(&webcam_frame, [x, 0]);
             // println!("Crosses:");
             for (i, cross) in scanner.filter(|c| c.is_plausible()).enumerate() {
-                let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
+                // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
+                let col = [1.0, 0.0, 0.0, 1.0];
                 // println!("{:?}", cross);
                 for span in cross.spans() {
                     let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
                     let p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
                     let p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
-                    draw_ctx.draw_line(&mut target, p1, p2, pix_w, col);
+                    draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
                 }
             }
         }
+
+        // Scan entire image for StaffCross points:
+
+        // Draw detected StaffCross points:
+
+        // Run RANSAC on the StaffCross points to find a line:
+
+        // Draw the detected line:
+
+
 
         // for cross in scanner {
         //     println!("{:?}", cross);
         // }
 
 
-        draw_ctx.draw_line(&mut target, [-0.5, 0.5], [0.0, -0.5], 0.01, [1.0, 0.0, 1.0, 0.0]);
-        draw_ctx.draw_line(&mut target, [-0.5, 0.0], [0.5, 1.0], 0.02, [1.0, 1.0, 0.0, 0.0]);
-        draw_ctx.draw_line(&mut target, [0.5, 1.0], [-0.5, 0.0], 0.01, [0.0, 1.0, 0.0, 0.0]);
+        // draw_ctx.draw_line(&mut target, [-0.5, 0.5], [0.0, -0.5], 0.01, [1.0, 0.0, 1.0, 0.0]);
+        // draw_ctx.draw_line(&mut target, [-0.5, 0.0], [0.5, 1.0], 0.02, [1.0, 1.0, 0.0, 0.0]);
+        // draw_ctx.draw_line(&mut target, [0.5, 1.0], [-0.5, 0.0], 0.01, [0.0, 1.0, 0.0, 0.0]);
 
         target.finish().unwrap();
 

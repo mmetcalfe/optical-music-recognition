@@ -6,6 +6,8 @@ authors = ["Mitchell Metcalfe <mitchell.s.metcalfe@gmail.com>"]
 [dependencies]
 libc = "0.2"
 glium = "*"
+nalgebra = "0.5.1"
+rand = "0.3.14"
 
 # piston2d-graphics = "*"
 # piston2d-glium_graphics = "*"
