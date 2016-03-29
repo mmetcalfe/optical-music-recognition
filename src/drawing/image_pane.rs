@@ -59,10 +59,12 @@ impl<'a> ImagePane<'a> {
     pub fn new(display : &glium::Display) -> ImagePane {
         // let v = 0.95;
         let v = 1.0;
-        let vertex1 = Vertex { position: [-v, -v], tex_coords: [1.0, 1.0] };
-        let vertex2 = Vertex { position: [ v, -v], tex_coords: [0.0, 1.0] };
-        let vertex3 = Vertex { position: [-v, v], tex_coords: [1.0, 0.0] };
-        let vertex4 = Vertex { position: [ v, v], tex_coords: [0.0, 0.0] };
+        let vx = -v;
+        let vy = v;
+        let vertex1 = Vertex { position: [-vx, -vy], tex_coords: [1.0, 1.0] };
+        let vertex2 = Vertex { position: [ vx, -vy], tex_coords: [0.0, 1.0] };
+        let vertex3 = Vertex { position: [-vx, vy], tex_coords: [1.0, 0.0] };
+        let vertex4 = Vertex { position: [ vx, vy], tex_coords: [0.0, 0.0] };
         let shape = vec![
             vertex1, vertex2, vertex3,
             vertex3, vertex4, vertex2,

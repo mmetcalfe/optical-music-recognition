@@ -43,7 +43,7 @@ impl Image {
         // OpenGL coordinates in [-1, 1]:
         let rx = nx * 2.0 - 1.0;
         let ry = ny * 2.0 - 1.0;
-        [-rx, -ry]
+        [rx, -ry]
     }
 
     pub fn contains(&self, col : usize, row : usize) -> bool {
