@@ -9,7 +9,7 @@ extern crate optical_music_recognition;
 use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
 use optical_music_recognition::drawing;
 use optical_music_recognition::omr;
-use optical_music_recognition::geometry;
+// use optical_music_recognition::geometry;
 use optical_music_recognition::omr::ransac::staff_cross::StaffCrossLineModel;
 // use std::io::Cursor;
 use glium::DisplayBuild;
@@ -51,19 +51,25 @@ fn main() {
         draw_ctx.draw_image(&mut target, &webcam_frame);
 
         // Scan entire image for StaffCross points:
-        let cross_points = omr::scanning::scan_entire_image(&webcam_frame, 10);
+        let cross_points = omr::scanning::staff_cross::scan_entire_image(&webcam_frame, 10);
 
         // Draw detected StaffCross points:
         // let x = 256;
-        for (i, cross) in cross_points.iter().enumerate() {
+        for cross in cross_points.iter() {
             // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
             let col = [1.0, 0.0, 0.0, 1.0];
             let x = cross.x;
             // println!("{:?}", cross);
             for span in cross.spans() {
                 let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
-                let p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
-                let p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
+                let pix_h = 2.0 * (1.0 / webcam_frame.height as f32);
+                let mut p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
+                let mut p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
+
+                // Draw from the top of the first pixel to the bottom of the second:
+                p1[1] -= pix_h / 2.0;
+                p2[1] += pix_h / 2.0;
+
                 draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
             }
         }

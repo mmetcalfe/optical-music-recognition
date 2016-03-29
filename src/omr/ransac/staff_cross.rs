@@ -1,7 +1,7 @@
 
 use omr::ransac::RansacModel;
-use omr::scanning::StaffCross;
-use nalgebra as na;
+use omr::scanning::staff_cross::StaffCross;
+// use nalgebra as na;
 use geometry as gm;
 
 pub struct StaffCrossLineModel;

@@ -1,6 +1,6 @@
 pub mod staff_cross;
 
-use rand::Rng;
+// use rand::Rng;
 use rand;
 
 // Fit stafflines using RANSAC:
@@ -33,7 +33,7 @@ pub struct RansacParams {
 }
 
 struct RansacState<Model, Point> {
-    samples : Vec<Point>,
+    // samples : Vec<Point>,
     model : Option<Model>,
     inliers : Vec<Point>,
 }
@@ -44,7 +44,7 @@ pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>) -> Opti
     let mut rng = rand::thread_rng();
 
     let mut best_state = RansacState::<Model, Point> {
-        samples: Vec::new(),
+        // samples: Vec::new(),
         model: None,
         inliers: Vec::new(),
     };
@@ -54,7 +54,7 @@ pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>) -> Opti
         return None;
     }
 
-    for i in 0..params.num_iterations {
+    for _ in 0..params.num_iterations {
         // Randomly select points:
         // println!("Randomly select points:");
         let samples = rand::sample(&mut rng, data.iter().cloned(), RM::num_required());
@@ -73,7 +73,7 @@ pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>) -> Opti
             if current_inliers.len() > params.min_inliers {
                 // Replace the best model:
                 best_state = RansacState {
-                    samples: samples,
+                    // samples: samples,
                     model: Some(current_fit),
                     inliers: current_inliers,
                 };
