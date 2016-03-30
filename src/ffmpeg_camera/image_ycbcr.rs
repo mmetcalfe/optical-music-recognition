@@ -13,12 +13,7 @@ use ffmpeg_camera::ffmpeg_utils;
 use ffmpeg_camera::ffmpeg_utils::FfmpegError;
 use nalgebra as na;
 
-#[derive(Copy, Clone)]
-pub struct Pixel {
-    pub y : u8,
-    pub cb : u8,
-    pub cr : u8,
-}
+use ffmpeg_camera::image;
 
 #[derive(Clone)]
 pub struct Image {
@@ -27,39 +22,18 @@ pub struct Image {
     pub data : Vec<u8>, // uyvy422 data buffer
 }
 
-impl Image {
-
-    pub fn opengl_coords_for_point(&self, point: na::Vec2<f32>) -> na::Vec2<f32> {
-        let px = point[0];
-        let py = point[1];
-
-        // // Half-pixel offsets:
-        // let ox = 0.5 / width;
-        // let oy = 0.5 / height;
-
-        // Normalised coordinates in [0, 1]:
-        let nx = (px + 0.5) / self.width as f32;
-        let ny = (py + 0.5) / self.height as f32;
-
-        // OpenGL coordinates in [-1, 1]:
-        let rx = nx * 2.0 - 1.0;
-        let ry = ny * 2.0 - 1.0;
-        na::Vec2::new(rx, -ry)
+impl image::Image for Image {
+    fn width(&self) -> usize {
+        self.width
+    }
+    fn height(&self) -> usize {
+        self.height
+    }
+    fn data(&self) -> &Vec<u8> {
+        &self.data
     }
 
-    pub fn opengl_coords_for_index(&self, index: [usize; 2]) -> na::Vec2<f32> {
-        let px = index[0] as f32;
-        let py = index[1] as f32;
-
-        self.opengl_coords_for_point(na::Vec2::new(px, py))
-    }
-
-    pub fn contains(&self, col : usize, row : usize) -> bool {
-         col < self.width &&
-         row < self.height
-    }
-
-    pub fn index(&self, col : usize, row : usize) -> Pixel {
+    fn index(&self, col : usize, row : usize) -> image::Pixel {
         if !self.contains(col, row) {
             panic!("Image index out of bounds.");
         }
@@ -73,13 +47,13 @@ impl Image {
         let v_i = row_offset + uv_offset + 2;
 
         unsafe {
-            Pixel {
+            image::Pixel {
                 y: *self.data.get_unchecked(y_i),
                 cb: *self.data.get_unchecked(u_i),
                 cr: *self.data.get_unchecked(v_i),
             }
         }
-        // Pixel {
+        // image::Pixel {
         //     y: self.data[y_i],
         //     cb: self.data[u_i],
         //     cr: self.data[v_i],
@@ -87,7 +61,7 @@ impl Image {
     }
 
     // Based on: https://lists.libav.org/pipermail/libav-user/2010-August/005159.html
-    pub fn save_jpeg(&self, save_fname : &str) -> Result<(), FfmpegError> {
+    fn save_jpeg(&self, save_fname : &str) -> Result<(), FfmpegError> {
         unsafe {
             let mut yuyv422_frame = try!(ffmpeg_utils::make_avframe(self.width, self.height, &self.data));
             try!(ffmpeg_utils::save_yuyv422_frame_to_jpeg(yuyv422_frame, save_fname));
@@ -97,7 +71,7 @@ impl Image {
         Ok(())
     }
 
-    pub fn save_pgm(&self, save_fname: &str) -> io::Result<()> {
+    fn save_pgm(&self, save_fname: &str) -> io::Result<()> {
         let mut file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -118,7 +92,7 @@ impl Image {
         //     // libc::fwrite(buffer.offset((i * stride) as isize) as *const libc::c_void, 1, img_w*3, f);
     }
 
-    // pub fn index(&self, row : usize, col : usize) -> Pixel {
+    // pub fn index(&self, row : usize, col : usize) -> image::Pixel {
     //     // // Use nearest u and v:
     //     // // u y v y u y v y ...
     //     // // 1 1 1
@@ -154,7 +128,7 @@ impl Image {
     //     let v_i = row_offset + uv_offset + 2;
     //
     //     unsafe {
-    //         Pixel {
+    //         image::Pixel {
     //             y: *self.data.get_unchecked(y_i),
     //             u: *self.data.get_unchecked(u_i),
     //             v: *self.data.get_unchecked(v_i),

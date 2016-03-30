@@ -1,4 +1,6 @@
 use ffmpeg_camera::image_ycbcr;
+use ffmpeg_camera::image::Image;
+use ffmpeg_camera::image;
 
 pub struct Segment {
     pub x: usize,
@@ -25,7 +27,7 @@ pub struct SegmentScanner<'a> {
     // Is the current point white?
     is_white : bool,
     last_white_point: [usize; 2],
-    curr_pixel: image_ycbcr::Pixel,
+    curr_pixel: image::Pixel,
 }
 
 impl<'a> SegmentScanner<'a> {

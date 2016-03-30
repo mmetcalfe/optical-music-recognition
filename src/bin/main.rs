@@ -7,6 +7,7 @@ extern crate nalgebra as na;
 
 extern crate optical_music_recognition;
 use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
+use optical_music_recognition::ffmpeg_camera::image::Image;
 use optical_music_recognition::drawing;
 use optical_music_recognition::omr;
 // use optical_music_recognition::geometry;
