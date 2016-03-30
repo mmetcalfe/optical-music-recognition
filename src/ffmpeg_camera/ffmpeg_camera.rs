@@ -4,7 +4,8 @@ use std::ptr;
 use std::mem;
 use std::ffi::CString;
 
-use ffmpeg_camera::image_ycbcr; // ::Image;
+use ffmpeg_camera::image_uyvy; // ::Image;
+// use ffmpeg_camera::image::Image;
 
 use ffmpeg_camera::ffmpeg_utils;
 use ffmpeg_camera::ffmpeg_utils::FfmpegError;
@@ -216,7 +217,7 @@ impl FfmpegCamera {
         result
     }
 
-    pub fn get_image(&mut self) -> Result<image_ycbcr::Image, FfmpegError> {
+    pub fn get_image_uyvy(&mut self) -> Result<image_uyvy::Image, FfmpegError> {
         let mut data : Vec<u8>;
         let width;
         let height;
@@ -264,7 +265,7 @@ impl FfmpegCamera {
             }
         }
 
-        Ok(image_ycbcr::Image {
+        Ok(image_uyvy::Image {
             width: width as usize,
             height: height as usize,
             data: data,

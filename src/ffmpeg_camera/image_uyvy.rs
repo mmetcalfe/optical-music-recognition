@@ -11,7 +11,7 @@ extern crate ffmpeg_sys;
 extern crate libc;
 use ffmpeg_camera::ffmpeg_utils;
 use ffmpeg_camera::ffmpeg_utils::FfmpegError;
-use nalgebra as na;
+// use nalgebra as na;
 
 use ffmpeg_camera::image;
 

@@ -1,7 +1,8 @@
 extern crate core;
 // use self::core::slice::Iter;
 
-use ffmpeg_camera::image_ycbcr;
+// use ffmpeg_camera::image_ycbcr;
+use ffmpeg_camera::image::Image;
 use nalgebra as na;
 use omr::scanning::segment;
 use std::collections::LinkedList;
@@ -96,14 +97,14 @@ impl StaffCross {
 }
 
 // Scans across an image, returning a sequence of detected StaffPoints.
-pub struct StaffScanner<'a> {
+pub struct StaffScanner<'a, I : 'a + Image> {
     // image: &'a image_ycbcr::Image,
-    segment_scanner: segment::SegmentScanner<'a>,
+    segment_scanner: segment::SegmentScanner<'a, I>,
     segment_queue: LinkedList<segment::Segment>,
 }
 
-impl<'a> StaffScanner<'a> {
-    pub fn new(image : &'a image_ycbcr::Image, start_point : [usize; 2]) -> StaffScanner {
+impl<'a, I : Image> StaffScanner<'a, I> {
+    pub fn new(image : &'a I, start_point : [usize; 2]) -> StaffScanner<I> {
         StaffScanner {
             // image: image,
             segment_scanner: segment::SegmentScanner::new(image, start_point),
@@ -112,7 +113,7 @@ impl<'a> StaffScanner<'a> {
     }
 }
 
-impl<'a> Iterator for StaffScanner<'a> {
+impl<'a, I : Image> Iterator for StaffScanner<'a, I> {
     type Item = StaffCross;
 
     fn next(&mut self) -> Option<StaffCross> {
@@ -140,11 +141,11 @@ impl<'a> Iterator for StaffScanner<'a> {
     }
 }
 
-pub fn scan_entire_image(image: &image_ycbcr::Image, step: usize) -> Vec<StaffCross> {
+pub fn scan_entire_image<I : Image>(image: &I, step: usize) -> Vec<StaffCross> {
     let mut results = Vec::new();
 
-    for x in (0..image.width).filter(|x| x % step == 0) {
-        let scanner = StaffScanner::new(&image, [x, 0]);
+    for x in (0..image.width()).filter(|x| x % step == 0) {
+        let scanner = StaffScanner::new(image, [x, 0]);
 
         let crosses = scanner.filter(|c| c.is_plausible());
 

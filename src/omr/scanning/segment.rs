@@ -1,4 +1,4 @@
-use ffmpeg_camera::image_ycbcr;
+// use ffmpeg_camera::image_ycbcr;
 use ffmpeg_camera::image::Image;
 use ffmpeg_camera::image;
 
@@ -20,8 +20,8 @@ pub struct Segment {
 
 // Scans across an image, classifying pixels as either white or black, and returning a sequence of
 // black line segments.
-pub struct SegmentScanner<'a> {
-    image : &'a image_ycbcr::Image,
+pub struct SegmentScanner<'a, I : 'a + Image> {
+    image : &'a I,
     curr_point : [usize; 2],
 
     // Is the current point white?
@@ -30,8 +30,9 @@ pub struct SegmentScanner<'a> {
     curr_pixel: image::Pixel,
 }
 
-impl<'a> SegmentScanner<'a> {
-    pub fn new(image : &'a image_ycbcr::Image, start_point : [usize; 2]) -> SegmentScanner {
+impl<'a, I : Image> SegmentScanner<'a, I>
+    where I : Image {
+    pub fn new(image : &'a I, start_point : [usize; 2]) -> SegmentScanner<I> {
         SegmentScanner {
             image: image,
             curr_point: start_point,
@@ -42,7 +43,7 @@ impl<'a> SegmentScanner<'a> {
     }
 }
 
-impl<'a> Iterator for SegmentScanner<'a> {
+impl<'a, I : Image> Iterator for SegmentScanner<'a, I> {
     type Item = Segment;
 
     fn next(&mut self) -> Option<Segment> {

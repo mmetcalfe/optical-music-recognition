@@ -2,7 +2,8 @@ use drawing::rectangle_buffer::RectangleBuffer;
 use drawing::rectangle_buffer::RotatedRectangle;
 use drawing::image_pane::ImagePane;
 
-use ffmpeg_camera::image_ycbcr;
+use ffmpeg_camera::image_uyvy;
+// use ffmpeg_camera::image::Image;
 use glium;
 use nalgebra as na;
 
@@ -25,8 +26,8 @@ impl<'a> DrawingContext<'a> {
         self.rectangle_buffer.draw_rectangle(target, rect, colour)
     }
 
-    pub fn draw_image(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
-        self.image_pane.draw_image(target, image)
+    pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
+        self.image_pane.draw_image_uyvy(target, image)
     }
 
     pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {

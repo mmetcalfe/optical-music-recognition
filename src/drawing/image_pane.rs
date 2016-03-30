@@ -1,4 +1,5 @@
-use ffmpeg_camera::image_ycbcr;
+use ffmpeg_camera::image_uyvy;
+// use ffmpeg_camera::image::Image;
 use glium;
 use glium::Surface;
 use std::borrow::Cow;
@@ -39,7 +40,7 @@ impl<'a> ImagePane<'a> {
         ).unwrap();
     }
 
-    pub fn draw_image(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
+    pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
         // let cow: Cow<[_]> = Cow::Owned(image.data);
         let cow: Cow<[_]> = Cow::Borrowed(&image.data);
         // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
