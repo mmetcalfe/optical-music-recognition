@@ -1,11 +1,7 @@
 
 // use std::ops;
-
 // use std::cmp;
-use std::io;
-use std::io::prelude::*;
 // use std::fs::File;
-use std::fs::OpenOptions;
 
 extern crate ffmpeg_sys;
 extern crate libc;
@@ -23,6 +19,14 @@ pub struct Image {
 }
 
 impl image::Image for Image {
+    fn from_raw_parts(width: usize, height: usize, data: Vec<u8>) -> Image {
+        Image {
+            width: width,
+            height: height,
+            data: data,
+        }
+    }
+
     fn width(&self) -> usize {
         self.width
     }
@@ -64,32 +68,11 @@ impl image::Image for Image {
     fn save_jpeg(&self, save_fname : &str) -> Result<(), FfmpegError> {
         unsafe {
             let mut yuyv422_frame = try!(ffmpeg_utils::make_avframe(self.width, self.height, &self.data));
-            try!(ffmpeg_utils::save_yuyv422_frame_to_jpeg(yuyv422_frame, save_fname));
+            try!(ffmpeg_utils::save_frame_to_jpeg(yuyv422_frame, save_fname));
             ffmpeg_sys::av_frame_free(&mut yuyv422_frame);
         }
 
         Ok(())
-    }
-
-    fn save_pgm(&self, save_fname: &str) -> io::Result<()> {
-        let mut file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(save_fname)
-            .unwrap();
-        try!(write!(file, "P6\n{} {}\n{}\n", self.width, self.height, 255));
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let px = self.index(x, y);
-                try!(file.write(&[px.y]));
-                try!(file.write(&[px.cb]));
-                try!(file.write(&[px.cr]));
-            }
-        }
-        try!(writeln!(file, ""));
-        Ok(())
-        //     // libc::fwrite(buffer.offset((i * stride) as isize) as *const libc::c_void, 1, img_w*3, f);
     }
 
     // pub fn index(&self, row : usize, col : usize) -> image::Pixel {

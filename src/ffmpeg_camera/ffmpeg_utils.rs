@@ -117,21 +117,39 @@ pub unsafe fn create_av_dict(entries : Vec<(&str, &str, libc::c_int)>) -> *mut f
     dict
 }
 
+pub fn av_pix_fmt_from_i32(pix_fmt: i32) -> ffmpeg_sys::AVPixelFormat {
+    match pix_fmt {
+        0 => ffmpeg_sys::AV_PIX_FMT_YUVJ420P,
+        2 => ffmpeg_sys::AV_PIX_FMT_RGB24,
+        17 => ffmpeg_sys::AV_PIX_FMT_UYVY422,
+        _ => {
+            println!("Unknown av_pix_fmt value: {}", pix_fmt);
+            panic!();
+        },
+    }
+}
 
-pub unsafe fn frame_uyvy422_to_yuvj420p(frame_uyvy422 : *const ffmpeg_sys::AVFrame, frame_yuvj420p : *mut ffmpeg_sys::AVFrame) {
+pub unsafe fn convert_frame(
+    src_frame : *const ffmpeg_sys::AVFrame,
+    pixel_format : ffmpeg_sys::AVPixelFormat)
+    -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
+    let src_w = (*src_frame).width as usize;
+    let src_h = (*src_frame).height as usize;
+    let mut dst_frame = try!(make_empty_avframe(src_w, src_h, pixel_format));
+    copy_and_convert_frame(src_frame, dst_frame);
 
-    let src_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
-    let dst_format = ffmpeg_sys::AV_PIX_FMT_YUVJ420P;
+    Ok(dst_frame)
+}
 
-    // println!("frame_uyvy: {:?}", frame_uyvy422);
-    // println!("frame_yuvj420p: {:?}", frame_yuvj420p);
+pub unsafe fn copy_and_convert_frame(src_frame : *const ffmpeg_sys::AVFrame, dst_frame : *mut ffmpeg_sys::AVFrame) {
+    let src_format = av_pix_fmt_from_i32((*src_frame).format);
+    let dst_format = av_pix_fmt_from_i32((*dst_frame).format);
 
-    let src_w = (*frame_uyvy422).width;
-    let src_h = (*frame_uyvy422).height;
-    // let src_format = (*frame_uyvy422).format as ffmpeg_sys::AVPixelFormat;
+    let src_w = (*src_frame).width;
+    let src_h = (*src_frame).height;
     let dst_w = src_w;
     let dst_h = src_h;
-    // let dst_format = ffmpeg_sys::AV_PIX_FMT_RGB24;
+
     let flags = ffmpeg_sys::SWS_BILINEAR;
     let src_filter : *mut ffmpeg_sys::SwsFilter = ptr::null_mut();
     let dst_filter : *mut ffmpeg_sys::SwsFilter = ptr::null_mut();
@@ -154,18 +172,66 @@ pub unsafe fn frame_uyvy422_to_yuvj420p(frame_uyvy422 : *const ffmpeg_sys::AVFra
     let src_slice_h = src_h;
     ffmpeg_sys::sws_scale(
         img_convert_ctx,
-        &((*frame_uyvy422).data[0] as *const u8),
-        &(*frame_uyvy422).linesize[0],
+        &((*src_frame).data[0] as *const u8),
+        &(*src_frame).linesize[0],
         src_slice_y,
         src_slice_h,
-        &mut (*frame_yuvj420p).data[0],
-        &mut (*frame_yuvj420p).linesize[0],
+        &mut (*dst_frame).data[0],
+        &mut (*dst_frame).linesize[0],
     );
 }
 
+pub unsafe fn make_frame_buffer_vec(width: usize, height: usize, pixel_format: ffmpeg_sys::AVPixelFormat) -> Vec<u8> {
+    let align = 1; // "the assumed linesize alignment"
+    let num_bytes = ffmpeg_sys::av_image_get_buffer_size(
+        pixel_format,
+        width as i32,
+        height as i32,
+        align
+    );
 
-pub unsafe fn make_empty_yuv420p_frame(width : usize, height : usize) -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
-    let pixel_format = ffmpeg_sys::AV_PIX_FMT_YUV420P;
+    // Create the buffer:
+    make_uninitialised_vec(num_bytes as usize)
+}
+
+pub unsafe fn copy_frame_data_to_vec(frame: *mut ffmpeg_sys::AVFrame) -> Result<Vec<u8>, FfmpegError> {
+    let width = (*frame).width as usize;
+    let height = (*frame).height as usize;
+
+    let pixel_format = av_pix_fmt_from_i32((*frame).format);
+    let mut data = make_frame_buffer_vec(width, height, pixel_format);
+
+    let num_bytes = data.len();
+    let align = 1; // "the assumed linesize alignment"
+
+    // Copy raw frame to the buffer:
+    let dst_size = num_bytes;
+    let src_data_ptr = (&(*frame).data as *const _) as *const *const u8;
+    let src_linesize_ptr = &(*frame).linesize as *const i32;
+    let bytes_written = ffmpeg_sys::av_image_copy_to_buffer(
+        data.as_mut_ptr(),
+        dst_size as i32,
+        src_data_ptr,
+        src_linesize_ptr,
+        pixel_format,
+        width as i32,
+        height as i32,
+        align
+    );
+
+    if bytes_written > num_bytes as i32 {
+        println!("bytes_written > num_bytes : {} > {}", bytes_written, num_bytes);
+        panic!("get_image, av_image_get_buffer_size: Data buffer overrun.");
+    } else if bytes_written < 0 {
+        log_av_error("get_image, av_image_copy_to_buffer", bytes_written);
+        return Err(FfmpegError::from_av_error(bytes_written))
+    }
+
+    Ok(data)
+}
+
+pub unsafe fn make_empty_avframe(width : usize, height : usize, pixel_format : ffmpeg_sys::AVPixelFormat) -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
+    // let pixel_format = ffmpeg_sys::AV_PIX_FMT_YUV420P;
 
     // Initialise the input frame:
     // See: http://stackoverflow.com/a/20498359/3622526
@@ -250,12 +316,12 @@ pub unsafe fn make_avframe(width : usize, height : usize, data : &Vec<u8>) -> Re
     Ok(yuyv_frame)
 }
 
-pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFrame, save_fname : &str) -> Result<(), FfmpegError> {
+pub unsafe fn save_frame_to_jpeg(src_frame : *mut ffmpeg_sys::AVFrame, save_fname : &str) -> Result<(), FfmpegError> {
     // let input_pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
     let output_pixel_format = ffmpeg_sys::AV_PIX_FMT_YUVJ420P;
 
-    let width = (*yuyv422_frame).width as usize;
-    let height = (*yuyv422_frame).height as usize;
+    let width = (*src_frame).width as usize;
+    let height = (*src_frame).height as usize;
 
     // Get the mjpeg encoder:
     let codec_id = ffmpeg_sys::AV_CODEC_ID_MJPEG;
@@ -308,9 +374,10 @@ pub unsafe fn save_yuyv422_frame_to_jpeg(yuyv422_frame : *mut ffmpeg_sys::AVFram
     (*jpeg_context).global_quality = (*jpeg_context).qmin * ffmpeg_sys::FF_QP2LAMBDA;
     // (*jpeg_context).flags = ffmpeg_sys::CODEC_FLAG_QSCALE;
 
-    // let mut yuyv422_frame = try!(self.make_avframe());
-    let mut yuv420p_frame = try!(make_empty_yuv420p_frame(width, height));
-    frame_uyvy422_to_yuvj420p(yuyv422_frame, yuv420p_frame);
+    // let mut src_frame = try!(self.make_avframe());
+    // let mut yuv420p_frame = try!(make_empty_avframe(width, height, ffmpeg_sys::AV_PIX_FMT_YUV420P));
+    // copy_and_convert_frame(src_frame, yuv420p_frame);
+    let mut yuv420p_frame = try!(convert_frame(src_frame, ffmpeg_sys::AV_PIX_FMT_YUV420P));
 
     // println!("Initialise the output packet");
 

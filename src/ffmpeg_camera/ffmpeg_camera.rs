@@ -4,7 +4,9 @@ use std::ptr;
 use std::mem;
 use std::ffi::CString;
 
-use ffmpeg_camera::image_uyvy; // ::Image;
+use ffmpeg_camera::image_uyvy;
+use ffmpeg_camera::image_ycbcr;
+use ffmpeg_camera::image;
 // use ffmpeg_camera::image::Image;
 
 use ffmpeg_camera::ffmpeg_utils;
@@ -217,7 +219,8 @@ impl FfmpegCamera {
         result
     }
 
-    pub fn get_image_uyvy(&mut self) -> Result<image_uyvy::Image, FfmpegError> {
+    pub fn get_image<I : image::Image>(&mut self, target_format : ffmpeg_sys::AVPixelFormat)
+        -> Result<I, FfmpegError> {
         let mut data : Vec<u8>;
         let width;
         let height;
@@ -226,51 +229,91 @@ impl FfmpegCamera {
             // Read a frame into the camera buffers:
             try!(self.read_next_frame());
 
-            // Find the buffer size:
-            let pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
-            width = (*self.decoder_context).width;
-            height = (*self.decoder_context).height;
-            let align = 1; // "the assumed linesize alignment"
-            let num_bytes = ffmpeg_sys::av_image_get_buffer_size(
-                pixel_format,
-                width,
-                height,
-                align
-            );
+            let mut src_frame = self.frame_raw;
+            let mut converted_frame = ptr::null_mut::<ffmpeg_sys::AVFrame>();
 
-            // Create the buffer:
-            data = ffmpeg_utils::make_uninitialised_vec(num_bytes as usize);
+            let mut frame_format = ffmpeg_utils::av_pix_fmt_from_i32((*self.frame_raw).format);
+            if frame_format != target_format {
+                // Create a frame for format conversion:
+                converted_frame = try!(ffmpeg_utils::convert_frame(self.frame_raw, target_format));
 
-            // Copy raw frame to the buffer:
-            let dst_size = num_bytes;
-            let src_data = (&(*self.frame_raw).data as *const _) as *const *const u8;
-            let src_linesize = &(*self.frame_raw).linesize as *const i32;
-            let bytes_written = ffmpeg_sys::av_image_copy_to_buffer(
-                data.as_mut_ptr(),
-                dst_size,
-                src_data,
-                src_linesize,
-                pixel_format,
-                width,
-                height,
-                align
-            );
-
-            if bytes_written > num_bytes {
-                println!("bytes_written > num_bytes : {} > {}", bytes_written, num_bytes);
-                panic!("get_image, av_image_get_buffer_size: Data buffer overrun.");
-            } else if bytes_written < 0 {
-                ffmpeg_utils::log_av_error("get_image, av_image_copy_to_buffer", bytes_written);
-                return Err(FfmpegError::from_av_error(bytes_written))
+                // Make converted_frame the source frame for the copy:
+                src_frame = converted_frame;
             }
+
+            width = (*self.decoder_context).width as usize;
+            height = (*self.decoder_context).height as usize;
+            data = try!(ffmpeg_utils::copy_frame_data_to_vec(src_frame));
+
+            // Free the frame used for format conversion:
+            ffmpeg_sys::av_frame_free(&mut converted_frame);
         }
 
-        Ok(image_uyvy::Image {
-            width: width as usize,
-            height: height as usize,
-            data: data,
-        })
+        Ok(I::from_raw_parts(width, height, data))
     }
+
+    pub fn get_image_uyvy(&mut self) -> Result<image_uyvy::Image, FfmpegError> {
+        self.get_image::<image_uyvy::Image>(ffmpeg_sys::AV_PIX_FMT_UYVY422)
+    }
+
+    pub fn get_image_ycbcr(&mut self) -> Result<image_ycbcr::Image, FfmpegError> {
+        self.get_image::<image_ycbcr::Image>(ffmpeg_sys::AV_PIX_FMT_RGB24)
+    }
+
+    // pub fn get_image_uyvy(&mut self) -> Result<image_uyvy::Image, FfmpegError> {
+    //     let mut data : Vec<u8>;
+    //     let width;
+    //     let height;
+    //
+    //     unsafe {
+    //         // Read a frame into the camera buffers:
+    //         try!(self.read_next_frame());
+    //
+    //         // Find the buffer size:
+    //         let pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
+    //         width = (*self.decoder_context).width;
+    //         height = (*self.decoder_context).height;
+    //         let align = 1; // "the assumed linesize alignment"
+    //         let num_bytes = ffmpeg_sys::av_image_get_buffer_size(
+    //             pixel_format,
+    //             width,
+    //             height,
+    //             align
+    //         );
+    //
+    //         // Create the buffer:
+    //         data = ffmpeg_utils::make_uninitialised_vec(num_bytes as usize);
+    //
+    //         // Copy raw frame to the buffer:
+    //         let dst_size = num_bytes;
+    //         let src_data = (&(*self.frame_raw).data as *const _) as *const *const u8;
+    //         let src_linesize = &(*self.frame_raw).linesize as *const i32;
+    //         let bytes_written = ffmpeg_sys::av_image_copy_to_buffer(
+    //             data.as_mut_ptr(),
+    //             dst_size,
+    //             src_data,
+    //             src_linesize,
+    //             pixel_format,
+    //             width,
+    //             height,
+    //             align
+    //         );
+    //
+    //         if bytes_written > num_bytes {
+    //             println!("bytes_written > num_bytes : {} > {}", bytes_written, num_bytes);
+    //             panic!("get_image, av_image_get_buffer_size: Data buffer overrun.");
+    //         } else if bytes_written < 0 {
+    //             ffmpeg_utils::log_av_error("get_image, av_image_copy_to_buffer", bytes_written);
+    //             return Err(FfmpegError::from_av_error(bytes_written))
+    //         }
+    //     }
+    //
+    //     Ok(image_uyvy::Image {
+    //         width: width as usize,
+    //         height: height as usize,
+    //         data: data,
+    //     })
+    // }
 
     pub fn get_camera(video_filename : &str, framerate_str : &str, video_size : (usize, usize)) -> Result<FfmpegCamera, FfmpegError> {
 
