@@ -94,16 +94,14 @@ impl<'a> ImagePane<'a> {
             in vec2 v_tex_coords;
             out vec4 color;
             uniform sampler2D tex;
-            void main() {
-                ivec2 pix_1 = ivec2(v_tex_coords.x*1280.0, v_tex_coords.y*720.0);
-                // ivec2 pix_1 = ivec2(gl_FragCoord.xy);
 
+            vec4 convert_uyvy422_yuv24(sampler2D uyvy422_tex, ivec2 pix_1) {
                 bool is_odd = mod(pix_1.x, 2) != 0;
                 int offset = is_odd ? -1 : 1;
                 ivec2 pix_2 = ivec2(pix_1.x + offset, pix_1.y);
 
-                vec4 col_1 = texelFetch(tex, pix_1, 0);
-                vec4 col_2 = texelFetch(tex, pix_2, 0);
+                vec4 col_1 = texelFetch(uyvy422_tex, pix_1, 0);
+                vec4 col_2 = texelFetch(uyvy422_tex, pix_2, 0);
 
                 float y, cb, cr;
                 if (is_odd) {
@@ -120,15 +118,31 @@ impl<'a> ImagePane<'a> {
                     cr = uy.x;
                 }
 
-                // vec2 wy = texture(tex, v_tex_coords);
+                return vec4(y, cb, cr, 1.0);
+            }
+
+            vec4 convert_ycbcra_rgba(vec4 ycbcra) {
+                float y = ycbcra.x;
+                float cb = ycbcra.y;
+                float cr = ycbcra.z;
+                float a = ycbcra.w;
 
                 // From https://en.wikipedia.org/wiki/YCbCr#JPEG_conversion
                 float r = y + 1.402*(cr-0.5);
                 float g = y - 0.34414*(cb-0.5) - 0.71414*(cr-0.5);
                 float b = y + 1.772*(cb-0.5);
 
-                color = vec4(r, g, b, 1);
+                return vec4(r, g, b, a);
+            }
 
+            void main() {
+                // ivec2 pix_1 = ivec2(v_tex_coords.x*1280.0, v_tex_coords.y*720.0);
+                ivec2 pix_1 = ivec2(gl_FragCoord.xy);
+
+                vec4 ycbcra = convert_uyvy422_yuv24(tex, pix_1);
+                vec4 rgba = convert_ycbcra_rgba(ycbcra);
+
+                color = rgba;
                 // color = texture(tex, v_tex_coords);
             }
         "#;
