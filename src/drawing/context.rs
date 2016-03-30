@@ -52,4 +52,14 @@ impl<'a> DrawingContext<'a> {
         };
         self.rectangle_buffer.draw_rectangle(target, &rect, colour)
     }
+
+    pub fn draw_line_extended(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
+        let dir = na::normalize(&(p2 - p1));
+        let avg = (p1 + p2) / 2.0;
+
+        let e1 = avg + dir * 5.0;
+        let e2 = avg - dir * 5.0;
+
+        self.draw_line(target, e1, e2, lw, colour);
+    }
 }

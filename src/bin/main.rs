@@ -52,7 +52,8 @@ fn main() {
         draw_ctx.draw_image_uyvy(&mut target, &webcam_frame);
 
         // Scan entire image for StaffCross points:
-        let cross_points = omr::scanning::staff_cross::scan_entire_image(&webcam_frame, 10);
+        let num_scan_lines = 100;
+        let cross_points = omr::scanning::staff_cross::scan_entire_image(&webcam_frame, num_scan_lines);
 
         // Draw detected StaffCross points:
         // let x = 256;
@@ -87,8 +88,10 @@ fn main() {
         if let Some(line) = maybe_line {
             let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
             let col = [0.0, 0.0, 1.0, 1.0];
+            let col_ext = [0.0, 1.0, 0.0, 1.0];
             let p1 = webcam_frame.opengl_coords_for_point(line.a);
             let p2 = webcam_frame.opengl_coords_for_point(line.b);
+            draw_ctx.draw_line_extended(&mut target, p1, p2, pix_w * 5.0, col_ext);
             draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
         }
 

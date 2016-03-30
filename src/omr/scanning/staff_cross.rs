@@ -6,6 +6,7 @@ use ffmpeg_camera::image::Image;
 use nalgebra as na;
 use omr::scanning::segment;
 use std::collections::LinkedList;
+use std::cmp;
 
 // Represents a the intersection of a straight line with a set of 5 staff lines.
 // Stores the coordinates of each of the 5 line intersections in image coordinates.
@@ -141,8 +142,10 @@ impl<'a, I : Image> Iterator for StaffScanner<'a, I> {
     }
 }
 
-pub fn scan_entire_image<I : Image>(image: &I, step: usize) -> Vec<StaffCross> {
+pub fn scan_entire_image<I : Image>(image: &I, num_lines: usize) -> Vec<StaffCross> {
     let mut results = Vec::new();
+
+    let step = cmp::max(1, image.width() / num_lines);
 
     for x in (0..image.width()).filter(|x| x % step == 0) {
         let scanner = StaffScanner::new(image, [x, 0]);
