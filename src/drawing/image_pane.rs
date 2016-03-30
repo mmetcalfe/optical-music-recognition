@@ -44,13 +44,15 @@ impl<'a> ImagePane<'a> {
         // let cow: Cow<[_]> = Cow::Owned(image.data);
         let cow: Cow<[_]> = Cow::Borrowed(&image.data);
         // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
-        let img_w = image.width as u32 / 2;
+        // let img_w = image.width as u32 / 2;
+        let img_w = image.width as u32;
         let img_h = image.height as u32;
         let raw_image = glium::texture::RawImage2d {
             data: cow,
             width: img_w,
             height: img_h,
-            format: glium::texture::ClientFormat::U8U8U8U8
+            // format: glium::texture::ClientFormat::U8U8U8U8
+            format: glium::texture::ClientFormat::U8U8
         };
         let texture = glium::texture::Texture2d::new(self.display, raw_image).unwrap();
 
@@ -86,20 +88,41 @@ impl<'a> ImagePane<'a> {
             }
         "#;
 
+        // Based on: http://stackoverflow.com/q/25440114/3622526
         let fragment_shader_src = r#"
             #version 140
             in vec2 v_tex_coords;
             out vec4 color;
             uniform sampler2D tex;
             void main() {
-                vec4 uyvy = texture(tex, v_tex_coords);
+                ivec2 pix_1 = ivec2(v_tex_coords.x*1280.0, v_tex_coords.y*720.0);
+                // ivec2 pix_1 = ivec2(gl_FragCoord.xy);
+
+                bool is_odd = mod(pix_1.x, 2) != 0;
+                int offset = is_odd ? -1 : 1;
+                ivec2 pix_2 = ivec2(pix_1.x + offset, pix_1.y);
+
+                vec4 col_1 = texelFetch(tex, pix_1, 0);
+                vec4 col_2 = texelFetch(tex, pix_2, 0);
+
+                float y, cb, cr;
+                if (is_odd) {
+                    vec2 uy = col_1.xy;
+                    vec2 vy = col_2.xy;
+                    y = uy.y;
+                    cb = vy.x;
+                    cr = uy.x;
+                } else {
+                    vec2 uy = col_2.xy;
+                    vec2 vy = col_1.xy;
+                    y = vy.y;
+                    cb = vy.x;
+                    cr = uy.x;
+                }
+
+                // vec2 wy = texture(tex, v_tex_coords);
 
                 // From https://en.wikipedia.org/wiki/YCbCr#JPEG_conversion
-                // (it's close enough)
-                float y = uyvy.y;
-                float cb = uyvy.x;
-                float cr = uyvy.z;
-
                 float r = y + 1.402*(cr-0.5);
                 float g = y - 0.34414*(cb-0.5) - 0.71414*(cr-0.5);
                 float b = y + 1.772*(cb-0.5);

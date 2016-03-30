@@ -41,8 +41,8 @@ fn main() {
     // let rect_buff = drawing::rectangle_buffer::RectangleBuffer::new(&display);
 
     loop {
-        // let webcam_frame = camera.get_image_uyvy().unwrap();
-        let webcam_frame = camera.get_image_ycbcr().unwrap();
+        let webcam_frame = camera.get_image_uyvy().unwrap();
+        // let webcam_frame = camera.get_image_ycbcr().unwrap();
 
         // webcam_frame.save_pgm("image.pgm").unwrap();
         webcam_frame.save_jpeg("image.jpg").unwrap();
@@ -50,7 +50,7 @@ fn main() {
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        // draw_ctx.draw_image_uyvy(&mut target, &webcam_frame);
+        draw_ctx.draw_image_uyvy(&mut target, &webcam_frame);
 
         // Scan entire image for StaffCross points:
         let num_scan_lines = 100;

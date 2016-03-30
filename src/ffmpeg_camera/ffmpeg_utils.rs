@@ -121,6 +121,7 @@ pub fn av_pix_fmt_from_i32(pix_fmt: i32) -> ffmpeg_sys::AVPixelFormat {
     match pix_fmt {
         0 => ffmpeg_sys::AV_PIX_FMT_YUVJ420P,
         2 => ffmpeg_sys::AV_PIX_FMT_RGB24,
+        5 => ffmpeg_sys::AV_PIX_FMT_YUV444P,
         17 => ffmpeg_sys::AV_PIX_FMT_UYVY422,
         _ => {
             println!("Unknown av_pix_fmt value: {}", pix_fmt);
@@ -273,6 +274,7 @@ pub unsafe fn make_empty_avframe(width : usize, height : usize, pixel_format : f
 
 pub unsafe fn make_avframe(width : usize, height : usize, data : &Vec<u8>) -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
     let pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
+    // let pixel_format = ffmpeg_sys::AV_PIX_FMT_YUV444P;
 
     // Initialise the input frame:
     // See: http://stackoverflow.com/a/20498359/3622526

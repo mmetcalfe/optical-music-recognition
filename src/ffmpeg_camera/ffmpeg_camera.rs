@@ -257,7 +257,7 @@ impl FfmpegCamera {
     }
 
     pub fn get_image_ycbcr(&mut self) -> Result<image_ycbcr::Image, FfmpegError> {
-        self.get_image::<image_ycbcr::Image>(ffmpeg_sys::AV_PIX_FMT_RGB24)
+        self.get_image::<image_ycbcr::Image>(ffmpeg_sys::AV_PIX_FMT_YUV444P)
     }
 
     // pub fn get_image_uyvy(&mut self) -> Result<image_uyvy::Image, FfmpegError> {
