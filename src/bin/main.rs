@@ -45,7 +45,12 @@ fn main() {
         // let webcam_frame = camera.get_image_ycbcr().unwrap();
 
         // webcam_frame.save_pgm("image.pgm").unwrap();
-        webcam_frame.save_jpeg("image.jpg").unwrap();
+        webcam_frame.save_jpeg("image_yuv422.jpg").unwrap();
+
+        let ycbcr_frame = draw_ctx.convert_uyvy_ycbcr(&webcam_frame).unwrap();
+
+        ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
+
 
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);

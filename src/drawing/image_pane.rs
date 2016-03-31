@@ -1,8 +1,13 @@
 use ffmpeg_camera::image_uyvy;
-// use ffmpeg_camera::image::Image;
+use ffmpeg_camera::image_ycbcr;
+use ffmpeg_camera::image::Image;
 use glium;
 use glium::Surface;
 use std::borrow::Cow;
+use ffmpeg_camera::ffmpeg_utils;
+
+extern crate core;
+use self::core::ops::Deref;
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -20,14 +25,7 @@ pub struct ImagePane<'a> {
 
 impl<'a> ImagePane<'a> {
     pub fn draw_texture(&self, target : &mut glium::Frame, texture : glium::texture::Texture2d) {
-        let t = 0.0;
         let uniforms = uniform! {
-            matrix: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [ t , 0.0, 0.0, 1.0f32],
-            ],
             tex: &texture,
         };
 
@@ -40,21 +38,70 @@ impl<'a> ImagePane<'a> {
         ).unwrap();
     }
 
-    pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
-        // let cow: Cow<[_]> = Cow::Owned(image.data);
+    pub fn uyvy_image_to_texture(&self, image : &image_uyvy::Image) -> glium::texture::Texture2d {
         let cow: Cow<[_]> = Cow::Borrowed(&image.data);
         // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
-        // let img_w = image.width as u32 / 2;
         let img_w = image.width as u32;
         let img_h = image.height as u32;
         let raw_image = glium::texture::RawImage2d {
             data: cow,
             width: img_w,
             height: img_h,
-            // format: glium::texture::ClientFormat::U8U8U8U8
             format: glium::texture::ClientFormat::U8U8
         };
         let texture = glium::texture::Texture2d::new(self.display, raw_image).unwrap();
+
+        texture
+    }
+
+    pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        let src_texture = self.uyvy_image_to_texture(uyvy_image);
+
+        let dst_texture = glium::texture::Texture2d::empty_with_format(
+            self.display,
+            glium::texture::UncompressedFloatFormat::U8U8U8U8,
+            glium::texture::MipmapsOption::NoMipmap,
+            uyvy_image.width as u32,
+            uyvy_image.height as u32
+        ).unwrap();
+        let mut framebuffer = try!(glium::framebuffer::SimpleFrameBuffer::new(self.display, &dst_texture));
+
+        let uniforms = uniform! {
+            tex: &src_texture,
+        };
+        framebuffer.draw(
+            &self.vertex_buffer,
+            &self.index_buffer,
+            &self.shader_program,
+            &uniforms,
+            &Default::default()
+        ).unwrap();
+
+        // // Slow options (i.e. ~500ms):
+        // // Somewhat informative: http://gamedev.stackexchange.com/a/44798
+        // let raw_image : glium::texture::RawImage2d<u8> = dst_texture.read();
+        // let raw_image : glium::texture::RawImage2d<u8> = buffer.read_as_texture_2d().unwrap(); // Slow
+        // let data = raw_image.data.deref().to_vec();
+
+        // So much faster (i.e. many frames per second):
+        let pixel_buffer = dst_texture.read_to_pixel_buffer();
+        let local_buffer : Vec<(u8, u8, u8, u8)> = pixel_buffer.read().unwrap();
+
+        // Note: This step is unstable, as it relies on undefined behaviour. Rust does not define
+        // the memory layout of tuples, but we assume here that the obvious layout is used (i.e.
+        // the fields are packed together and are layed out in declaration order).
+        let data = ffmpeg_utils::vec_to_bytes(local_buffer);
+
+        Ok(image_ycbcr::Image::from_raw_parts(
+            uyvy_image.width as usize,
+            uyvy_image.height as usize,
+            data
+        ))
+    }
+
+    pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
+        let texture = self.uyvy_image_to_texture(image);
 
         self.draw_texture(target, texture)
     }
@@ -81,10 +128,11 @@ impl<'a> ImagePane<'a> {
             in vec2 position;
             in vec2 tex_coords;
             out vec2 v_tex_coords;
-            uniform mat4 matrix;
+            // uniform mat4 matrix;
             void main() {
                 v_tex_coords = tex_coords;
-                gl_Position = matrix * vec4(position, 0.0, 1.0);
+                // gl_Position = matrix * vec4(position, 0.0, 1.0);
+                gl_Position = vec4(position, 0.0, 1.0);
             }
         "#;
 

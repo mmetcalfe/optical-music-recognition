@@ -22,6 +22,17 @@ pub fn make_uninitialised_vec<T>(length : usize) -> Vec<T> {
     }
 }
 
+pub fn vec_to_bytes<T>(mut input_vec: Vec<T>) -> Vec<u8> {
+    // See: https://doc.rust-lang.org/std/vec/struct.Vec.html#method.from_raw_parts
+    let size = mem::size_of::<T>()*input_vec.len();
+    let data_ptr = input_vec.as_mut_ptr();
+    unsafe {
+        mem::forget(input_vec); // Don't run input_vec's destructor.
+        // Create a full vector of uninitialised values:
+        Vec::from_raw_parts(data_ptr as *mut u8, size, size)
+    }
+}
+
 // Define an error type for FFmpeg:
 #[derive(Debug)]
 pub struct FfmpegError {
@@ -123,6 +134,7 @@ pub fn av_pix_fmt_from_i32(pix_fmt: i32) -> ffmpeg_sys::AVPixelFormat {
         2 => ffmpeg_sys::AV_PIX_FMT_RGB24,
         5 => ffmpeg_sys::AV_PIX_FMT_YUV444P,
         17 => ffmpeg_sys::AV_PIX_FMT_UYVY422,
+        30 => ffmpeg_sys::AV_PIX_FMT_RGB32,
         _ => {
             println!("Unknown av_pix_fmt value: {}", pix_fmt);
             panic!();
@@ -272,8 +284,8 @@ pub unsafe fn make_empty_avframe(width : usize, height : usize, pixel_format : f
     Ok(yuv420p_frame)
 }
 
-pub unsafe fn make_avframe(width : usize, height : usize, data : &Vec<u8>) -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
-    let pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
+pub unsafe fn make_avframe(width: usize, height: usize, pixel_format: ffmpeg_sys::AVPixelFormat, data: &Vec<u8>) -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
+    // let pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
     // let pixel_format = ffmpeg_sys::AV_PIX_FMT_YUV444P;
 
     // Initialise the input frame:

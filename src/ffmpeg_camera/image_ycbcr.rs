@@ -10,7 +10,11 @@ use ffmpeg_camera::image;
 pub struct Image {
     pub width : usize, // width in pixels
     pub height : usize, // height in pixels
-    pub data : Vec<u8>, // uyvy422 data buffer
+
+    // YCbCrA data buffer.
+    // Note: We'd like this buffer to just contain YCbCr data, so that there'd only be 24 bits per
+    // pixel, but reading data in that format back from the graphics card is extremely slow.
+    pub data : Vec<u8>,
 }
 
 impl image::Image for Image {
@@ -37,7 +41,7 @@ impl image::Image for Image {
             panic!("Image index out of bounds.");
         }
 
-        let y_i = (row * self.width + col) * 3;
+        let y_i = (row * self.width + col) * 4;
 
         unsafe {
             image::Pixel {
@@ -57,7 +61,7 @@ impl image::Image for Image {
     // Based on: https://lists.libav.org/pipermail/libav-user/2010-August/005159.html
     fn save_jpeg(&self, save_fname : &str) -> Result<(), FfmpegError> {
         unsafe {
-            let mut yuyv422_frame = try!(ffmpeg_utils::make_avframe(self.width, self.height, &self.data));
+            let mut yuyv422_frame = try!(ffmpeg_utils::make_avframe(self.width, self.height, ffmpeg_sys::AV_PIX_FMT_RGB32, &self.data));
             try!(ffmpeg_utils::save_frame_to_jpeg(yuyv422_frame, save_fname));
             ffmpeg_sys::av_frame_free(&mut yuyv422_frame);
         }

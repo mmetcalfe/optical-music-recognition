@@ -3,6 +3,7 @@ use drawing::rectangle_buffer::RotatedRectangle;
 use drawing::image_pane::ImagePane;
 
 use ffmpeg_camera::image_uyvy;
+use ffmpeg_camera::image_ycbcr;
 // use ffmpeg_camera::image::Image;
 use glium;
 use nalgebra as na;
@@ -62,4 +63,10 @@ impl<'a> DrawingContext<'a> {
 
         self.draw_line(target, e1, e2, lw, colour);
     }
+
+    pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        self.image_pane.convert_uyvy_ycbcr(uyvy_image)
+    }
+
 }
