@@ -1,3 +1,4 @@
+
 use drawing::rectangle_buffer::RectangleBuffer;
 use drawing::rectangle_buffer::RotatedRectangle;
 use drawing::image_pane::ImagePane;
@@ -29,6 +30,10 @@ impl<'a> DrawingContext<'a> {
 
     pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
         self.image_pane.draw_image_uyvy(target, image)
+    }
+
+    pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
+        self.image_pane.draw_image_ycbcr(target, image)
     }
 
     pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {

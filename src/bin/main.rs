@@ -55,7 +55,8 @@ fn main() {
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        draw_ctx.draw_image_uyvy(&mut target, &webcam_frame);
+        // draw_ctx.draw_image_uyvy(&mut target, &webcam_frame);
+        draw_ctx.draw_image_ycbcr(&mut target, &ycbcr_frame);
 
         // Scan entire image for StaffCross points:
         let num_scan_lines = 100;

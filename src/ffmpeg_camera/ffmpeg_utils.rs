@@ -134,6 +134,7 @@ pub fn av_pix_fmt_from_i32(pix_fmt: i32) -> ffmpeg_sys::AVPixelFormat {
         2 => ffmpeg_sys::AV_PIX_FMT_RGB24,
         5 => ffmpeg_sys::AV_PIX_FMT_YUV444P,
         17 => ffmpeg_sys::AV_PIX_FMT_UYVY422,
+        28 => ffmpeg_sys::AV_PIX_FMT_BGR32,
         30 => ffmpeg_sys::AV_PIX_FMT_RGB32,
         _ => {
             println!("Unknown av_pix_fmt value: {}", pix_fmt);

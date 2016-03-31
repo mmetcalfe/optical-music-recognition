@@ -1,5 +1,6 @@
 pub const CONVERT_UYVY422_YUV24 : &'static str = r#"
 vec4 convert_uyvy422_yuv24(sampler2D uyvy422_tex, ivec2 pix_1) {
+    // Based on: http://stackoverflow.com/q/25440114/3622526
     bool is_odd = mod(pix_1.x, 2) != 0;
     int offset = is_odd ? -1 : 1;
     ivec2 pix_2 = ivec2(pix_1.x + offset, pix_1.y);
@@ -40,4 +41,17 @@ vec4 convert_ycbcra_rgba(vec4 ycbcra) {
 
     return vec4(r, g, b, a);
 }
+"#;
+
+pub const VERTEX_SHADER_POS_TEX : &'static str = r#"
+    #version 140
+    in vec2 position;
+    in vec2 tex_coords;
+    out vec2 v_tex_coords;
+    // uniform mat4 matrix;
+    void main() {
+        v_tex_coords = tex_coords;
+        // gl_Position = matrix * vec4(position, 0.0, 1.0);
+        gl_Position = vec4(position, 0.0, 1.0);
+    }
 "#;
