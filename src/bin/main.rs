@@ -28,7 +28,11 @@ fn main() {
         ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (1280, 720))
             .expect("Failed to open camera.");
 
-    let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
+    let display = glium::glutin::WindowBuilder::new()
+        .with_dimensions(1280, 720)
+        .with_title(format!("OMR"))
+        .build_glium()
+        .unwrap();
 
     // let image = image::load(Cursor::new(&include_bytes!("../../curved-3.jpg")[..]),
     //                         image::JPEG).unwrap().to_rgba();
@@ -60,7 +64,7 @@ fn main() {
 
         // Scan entire image for StaffCross points:
         let num_scan_lines = 100;
-        let cross_points = omr::scanning::staff_cross::scan_entire_image(&webcam_frame, num_scan_lines);
+        let cross_points = omr::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
 
         // Draw detected StaffCross points:
         // let x = 256;
@@ -70,10 +74,10 @@ fn main() {
             let x = cross.x;
             // println!("{:?}", cross);
             for span in cross.spans() {
-                let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
-                let pix_h = 2.0 * (1.0 / webcam_frame.height as f32);
-                let mut p1 = webcam_frame.opengl_coords_for_index([x, span[0]]);
-                let mut p2 = webcam_frame.opengl_coords_for_index([x, span[1]]);
+                let pix_w = 2.0 * (1.0 / ycbcr_frame.width as f32);
+                let pix_h = 2.0 * (1.0 / ycbcr_frame.height as f32);
+                let mut p1 = ycbcr_frame.opengl_coords_for_index([x, span[0]]);
+                let mut p2 = ycbcr_frame.opengl_coords_for_index([x, span[1]]);
 
                 // Draw from the top of the first pixel to the bottom of the second:
                 p1[1] -= pix_h / 2.0;
@@ -85,19 +89,19 @@ fn main() {
 
         // Run RANSAC on the StaffCross points to find a line:
         let params = omr::ransac::RansacParams {
-            num_iterations: 500,
+            num_iterations: 50,
             max_distance: 10.0,
-            min_inliers: 5,
+            min_inliers: 20,
         };
         let maybe_line = omr::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
 
         // Draw the detected line:
         if let Some(line) = maybe_line {
-            let pix_w = 2.0 * (1.0 / webcam_frame.width as f32);
+            let pix_w = 2.0 * (1.0 / ycbcr_frame.width as f32);
             let col = [0.0, 0.0, 1.0, 1.0];
             let col_ext = [0.0, 1.0, 0.0, 1.0];
-            let p1 = webcam_frame.opengl_coords_for_point(line.a);
-            let p2 = webcam_frame.opengl_coords_for_point(line.b);
+            let p1 = ycbcr_frame.opengl_coords_for_point(line.a);
+            let p2 = ycbcr_frame.opengl_coords_for_point(line.b);
             draw_ctx.draw_line_extended(&mut target, p1, p2, pix_w * 5.0, col_ext);
             draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
         }

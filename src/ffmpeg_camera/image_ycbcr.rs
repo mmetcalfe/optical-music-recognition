@@ -41,13 +41,17 @@ impl image::Image for Image {
             panic!("Image index out of bounds.");
         }
 
-        let y_i = (row * self.width + col) * 4;
+        let p_i = (row * self.width + col) * 4;
+
+        let y_i = p_i + 0;
+        let cb_i = p_i + 1;
+        let cr_i = p_i + 2;
 
         unsafe {
             image::Pixel {
                 y: *self.data.get_unchecked(y_i),
-                cb: *self.data.get_unchecked(y_i + 1),
-                cr: *self.data.get_unchecked(y_i + 2),
+                cb: *self.data.get_unchecked(cb_i),
+                cr: *self.data.get_unchecked(cr_i),
             }
         }
 

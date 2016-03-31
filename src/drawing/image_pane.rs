@@ -46,6 +46,7 @@ pub struct ImagePane<'a> {
     index_buffer : glium::index::NoIndices,
     uyuv_ycbcr_conversion_program : glium::Program,
     ycbcr_drawing_program : glium::Program,
+    adaptive_threshold_program : glium::Program,
     identity_program : glium::Program,
 }
 
@@ -154,7 +155,12 @@ impl<'a> ImagePane<'a> {
 
         self.draw_texture_to_framebuffer(&mut framebuffer, &self.uyuv_ycbcr_conversion_program, &src_texture);
 
-        Ok(texture_to_image(&dst_texture))
+        // Ok(texture_to_image(&dst_texture))
+
+        let processed = self.run_programs_on_texture(&dst_texture, &[
+            &self.adaptive_threshold_program
+        ]).unwrap();
+        Ok(texture_to_image(&processed))
     }
 
     pub fn run_programs_on_texture(&self, input_texture: &glium::texture::Texture2d, programs: &[&glium::Program])
@@ -218,11 +224,10 @@ impl<'a> ImagePane<'a> {
         let texture = self.ycbcr_image_to_texture(image);
 
         // let processed = self.run_programs_on_texture(&texture, &[
-        //     &self.ycbcr_drawing_program,
-        //     &self.ycbcr_drawing_program
+        //     &self.adaptive_threshold_program
         // ]).unwrap();
-        //
-        // self.draw_texture(target, &self.identity_program, processed)
+
+        // self.draw_texture_flipped(target, &self.identity_program, processed)
 
         let texture = self.ycbcr_image_to_texture(image);
         self.draw_texture_flipped(target, &self.ycbcr_drawing_program, texture)
@@ -280,6 +285,31 @@ impl<'a> ImagePane<'a> {
         ).unwrap()
     }
 
+    pub fn make_adaptive_threshold_program(display : &glium::Display) -> glium::Program {
+        let fragment_shader_src = String::new()
+            + r#"
+            #version 140
+            in vec2 v_tex_coords;
+            out vec4 color;
+            uniform sampler2D tex;
+            "#
+            + glsl_functions::ADAPTIVE_THRESHOLD
+            + r#"
+            void main() {
+                ivec2 pix_1 = ivec2(gl_FragCoord.xy);
+                vec4 ycbcra = adaptive_threshold(tex, pix_1);
+                color = ycbcra;
+            }
+        "#;
+
+        glium::Program::from_source(
+            display,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
+            &fragment_shader_src,
+            None
+        ).unwrap()
+    }
+
     pub fn make_identity_program(display : &glium::Display) -> glium::Program {
         let fragment_shader_src = String::new()
             + r#"
@@ -325,6 +355,7 @@ impl<'a> ImagePane<'a> {
             index_buffer: indices,
             uyuv_ycbcr_conversion_program: Self::make_uyuv_ycbcr_conversion_program(display),
             ycbcr_drawing_program: Self::make_ycbcr_drawing_program(display),
+            adaptive_threshold_program: Self::make_adaptive_threshold_program(display),
             identity_program: Self::make_identity_program(display),
         }
     }

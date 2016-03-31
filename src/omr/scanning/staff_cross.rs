@@ -79,14 +79,16 @@ impl StaffCross {
             if last_end > 0 {
                 let gap_len = span[0] - last_end;
                 let gap_rel_err = (gap_len as f32 - avg_gap).abs() / avg_gap;
-                if gap_rel_err > 0.5 {
+                if gap_rel_err > 1.0 {
+                // if gap_rel_err > 0.5 {
                     return false;
                 }
             }
 
             let curr_len = span[1] - span[0];
             let len_rel_err = (curr_len as f32 - avg_len).abs() / avg_len;
-            if len_rel_err > 0.5 {
+            if len_rel_err > 3.0 {
+            // if len_rel_err > 0.5 {
                 return false;
             }
 

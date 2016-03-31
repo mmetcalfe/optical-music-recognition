@@ -67,3 +67,52 @@ pub const VERTEX_SHADER_POS_TEX_MAT : &'static str = r#"
         gl_Position = matrix * vec4(position, 0.0, 1.0);
     }
 "#;
+
+pub const ADAPTIVE_THRESHOLD : &'static str = r#"
+vec4 adaptive_threshold(sampler2D ycbcra_tex, ivec2 pix_1) {
+    const int half_width = 9;
+    const int size = half_width*2+1;
+    const int num_neighbours = size*size;
+
+    vec4 mean = vec4(0.0, 0.0, 0.0, 0.0);
+
+    vec4 neighborhood[num_neighbours];
+
+    int neighbour_index = 0;
+    for (int xo = -half_width; xo <= half_width; ++xo) {
+        for (int yo = -half_width; yo <= half_width; ++yo) {
+            ivec2 pix_i = ivec2(pix_1.x + xo, pix_1.y + yo);
+            vec4 col_i = texelFetch(ycbcra_tex, pix_i, 0);
+            mean += col_i;
+            neighborhood[neighbour_index] = col_i;
+            ++neighbour_index;
+        }
+    }
+
+    mean /= num_neighbours;
+
+    vec4 stddev = vec4(0.0, 0.0, 0.0, 0.0);
+
+    for (int i = 0; i < num_neighbours; ++i) {
+        vec4 dev = neighborhood[i] - mean;
+        stddev += dev * dev;
+    }
+
+    stddev /= num_neighbours;
+    stddev = sqrt(stddev);
+
+    vec4 col = texelFetch(ycbcra_tex, pix_1, 0);
+    vec4 norm = (col - mean) / stddev;
+
+    float relerror = (col.x - mean.x) / mean.x;
+
+    if (relerror < -0.05) {
+    // if (col.x - mean.x) {
+        // return vec4(0.0, col.y, col.z, 1.0);
+        return vec4(0.0, 0.0, 0.0, 1.0);
+    }
+
+    // return vec4(mean.x, mean.y, mean.z, 1.0);
+    return vec4(1.0, 0.0, 0.0, 1.0);
+}
+"#;
