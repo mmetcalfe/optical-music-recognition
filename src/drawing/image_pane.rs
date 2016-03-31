@@ -46,11 +46,56 @@ pub struct ImagePane<'a> {
     index_buffer : glium::index::NoIndices,
     uyuv_ycbcr_conversion_program : glium::Program,
     ycbcr_drawing_program : glium::Program,
+    identity_program : glium::Program,
 }
 
 impl<'a> ImagePane<'a> {
+    pub fn draw_texture_to_framebuffer(&self, target: &mut glium::framebuffer::SimpleFrameBuffer, program: &glium::Program, texture: &glium::texture::Texture2d) {
+        let uniforms = uniform! {
+            matrix: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32],
+            ],
+            tex: texture,
+        };
+        target.draw(
+            &self.vertex_buffer,
+            &self.index_buffer,
+            program,
+            &uniforms,
+            &Default::default()
+        ).unwrap();
+    }
+
     pub fn draw_texture(&self, target: &mut glium::Frame, program: &glium::Program, texture: glium::texture::Texture2d) {
         let uniforms = uniform! {
+            matrix: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32],
+            ],
+            tex: &texture,
+        };
+        target.draw(
+            &self.vertex_buffer,
+            &self.index_buffer,
+            program,
+            &uniforms,
+            &Default::default()
+        ).unwrap();
+    }
+
+    pub fn draw_texture_flipped(&self, target: &mut glium::Frame, program: &glium::Program, texture: glium::texture::Texture2d) {
+        let uniforms = uniform! {
+            matrix: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32],
+            ],
             tex: &texture,
         };
         target.draw(
@@ -107,18 +152,60 @@ impl<'a> ImagePane<'a> {
         ).unwrap();
         let mut framebuffer = try!(glium::framebuffer::SimpleFrameBuffer::new(self.display, &dst_texture));
 
-        let uniforms = uniform! {
-            tex: &src_texture,
-        };
-        framebuffer.draw(
-            &self.vertex_buffer,
-            &self.index_buffer,
-            &self.uyuv_ycbcr_conversion_program,
-            &uniforms,
-            &Default::default()
-        ).unwrap();
+        self.draw_texture_to_framebuffer(&mut framebuffer, &self.uyuv_ycbcr_conversion_program, &src_texture);
 
         Ok(texture_to_image(&dst_texture))
+    }
+
+    pub fn run_programs_on_texture(&self, input_texture: &glium::texture::Texture2d, programs: &[&glium::Program])
+        -> Result<glium::texture::Texture2d, glium::framebuffer::ValidationError> {
+
+        let tex_a = glium::texture::Texture2d::empty_with_format(
+            self.display,
+            glium::texture::UncompressedFloatFormat::U8U8U8U8,
+            glium::texture::MipmapsOption::NoMipmap,
+            input_texture.get_width(),
+            input_texture.get_height().unwrap()
+        ).unwrap();
+
+        let tex_b = glium::texture::Texture2d::empty_with_format(
+            self.display,
+            glium::texture::UncompressedFloatFormat::U8U8U8U8,
+            glium::texture::MipmapsOption::NoMipmap,
+            input_texture.get_width(),
+            input_texture.get_height().unwrap()
+        ).unwrap();
+
+        {
+            let mut framebuffer_a = try!(glium::framebuffer::SimpleFrameBuffer::new(self.display, &tex_a));
+            let mut framebuffer_b = try!(glium::framebuffer::SimpleFrameBuffer::new(self.display, &tex_b));
+
+            let mut src_texture = input_texture;
+
+            for (i, prog) in programs.iter().enumerate() {
+                let dst_framebuffer = {
+                    if i % 2 == 0 {
+                        &mut framebuffer_a
+                    } else {
+                        &mut framebuffer_b
+                    }
+                };
+
+                self.draw_texture_to_framebuffer(dst_framebuffer, &prog, &src_texture);
+
+                if i % 2 == 0 {
+                    src_texture = &tex_a;
+                } else {
+                    src_texture = &tex_b;
+                }
+            }
+        }
+
+        if programs.len() % 2 != 0 {
+            Ok(tex_a)
+        } else {
+            Ok(tex_b)
+        }
     }
 
     pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
@@ -130,7 +217,15 @@ impl<'a> ImagePane<'a> {
     pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
         let texture = self.ycbcr_image_to_texture(image);
 
-        self.draw_texture(target, &self.ycbcr_drawing_program, texture)
+        // let processed = self.run_programs_on_texture(&texture, &[
+        //     &self.ycbcr_drawing_program,
+        //     &self.ycbcr_drawing_program
+        // ]).unwrap();
+        //
+        // self.draw_texture(target, &self.identity_program, processed)
+
+        let texture = self.ycbcr_image_to_texture(image);
+        self.draw_texture_flipped(target, &self.ycbcr_drawing_program, texture)
     }
 
     pub fn make_uyuv_ycbcr_conversion_program(display : &glium::Display) -> glium::Program {
@@ -154,7 +249,7 @@ impl<'a> ImagePane<'a> {
 
         glium::Program::from_source(
             display,
-            glsl_functions::VERTEX_SHADER_POS_TEX,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
             &fragment_shader_src,
             None
         ).unwrap()
@@ -179,7 +274,29 @@ impl<'a> ImagePane<'a> {
 
         glium::Program::from_source(
             display,
-            glsl_functions::VERTEX_SHADER_POS_TEX,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
+            &fragment_shader_src,
+            None
+        ).unwrap()
+    }
+
+    pub fn make_identity_program(display : &glium::Display) -> glium::Program {
+        let fragment_shader_src = String::new()
+            + r#"
+            #version 140
+            in vec2 v_tex_coords;
+            out vec4 color;
+            uniform sampler2D tex;
+            "#
+            + r#"
+            void main() {
+                color = texture(tex, v_tex_coords);
+            }
+        "#;
+
+        glium::Program::from_source(
+            display,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
             &fragment_shader_src,
             None
         ).unwrap()
@@ -189,7 +306,7 @@ impl<'a> ImagePane<'a> {
         // let v = 0.95;
         let v = 1.0;
         let vx = -v;
-        let vy = v;
+        let vy = -v;
         let vertex1 = Vertex { position: [-vx, -vy], tex_coords: [1.0, 1.0] };
         let vertex2 = Vertex { position: [ vx, -vy], tex_coords: [0.0, 1.0] };
         let vertex3 = Vertex { position: [-vx, vy], tex_coords: [1.0, 0.0] };
@@ -208,6 +325,7 @@ impl<'a> ImagePane<'a> {
             index_buffer: indices,
             uyuv_ycbcr_conversion_program: Self::make_uyuv_ycbcr_conversion_program(display),
             ycbcr_drawing_program: Self::make_ycbcr_drawing_program(display),
+            identity_program: Self::make_identity_program(display),
         }
     }
 }
