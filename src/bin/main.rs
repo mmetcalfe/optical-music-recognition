@@ -67,12 +67,10 @@ fn main() {
         let cross_points = omr::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
 
         // Draw detected StaffCross points:
-        // let x = 256;
         for cross in cross_points.iter() {
             // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
             let col = [1.0, 0.0, 0.0, 1.0];
             let x = cross.x;
-            // println!("{:?}", cross);
             for span in cross.spans() {
                 let pix_w = 2.0 * (1.0 / ycbcr_frame.width as f32);
                 let pix_h = 2.0 * (1.0 / ycbcr_frame.height as f32);
@@ -80,12 +78,43 @@ fn main() {
                 let mut p2 = ycbcr_frame.opengl_coords_for_index([x, span[1]]);
 
                 // Draw from the top of the first pixel to the bottom of the second:
-                p1[1] -= pix_h / 2.0;
-                p2[1] += pix_h / 2.0;
+                if p2[1] < p1[1] {
+                        p1[1] += pix_h / 2.0;
+                        p2[1] -= pix_h / 2.0;
+                    } else {
+                        p1[1] -= pix_h / 2.0;
+                        p2[1] += pix_h / 2.0;
+                    }
 
                 draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
             }
         }
+
+        // // Draw segments:
+        // let segments = omr::scanning::segment::scan_entire_image(&ycbcr_frame, num_scan_lines);
+        // // let x = 256;
+        // for segment in segments.iter() {
+        //     // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
+        //     let col = [1.0, 0.0, 0.0, 1.0];
+        //     let x = segment.x;
+        //
+        //     let pix_w = 2.0 * (1.0 / ycbcr_frame.width as f32);
+        //     let pix_h = 2.0 * (1.0 / ycbcr_frame.height as f32);
+        //     let mut p1 = ycbcr_frame.opengl_coords_for_index([x, segment.y_min]);
+        //     let mut p2 = ycbcr_frame.opengl_coords_for_index([x, segment.y_max]);
+        //
+        //     // Draw from the top of the first pixel to the bottom of the second:
+        //     if p2[1] < p1[1] {
+        //         p1[1] += pix_h / 2.0;
+        //         p2[1] -= pix_h / 2.0;
+        //     } else {
+        //         p1[1] -= pix_h / 2.0;
+        //         p2[1] += pix_h / 2.0;
+        //     }
+        //
+        //     // draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
+        //     draw_ctx.draw_line(&mut target, p1, p2, pix_w, col);
+        // }
 
         // Run RANSAC on the StaffCross points to find a line:
         let params = omr::ransac::RansacParams {
