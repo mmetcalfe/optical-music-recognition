@@ -69,6 +69,10 @@ impl StaffCross {
         let avg_gap = gap_sum as f32 / 4.0;
         let avg_len = len_sum as f32 / 5.0;
 
+        // Allow some flexibility when detections are close to the smallest possible:
+        let max_gap_error = if avg_gap < 3.0 { 0.75 } else { 0.33 };
+        let max_len_error = if avg_len < 3.0 { 2.5 } else { 0.33 };
+
         // If stafflines are thicker than the spaces between them.
         if avg_len > avg_gap {
             return false;
@@ -79,16 +83,14 @@ impl StaffCross {
             if last_end > 0 {
                 let gap_len = span[0] - last_end;
                 let gap_rel_err = (gap_len as f32 - avg_gap).abs() / avg_gap;
-                if gap_rel_err > 1.0 {
-                // if gap_rel_err > 0.5 {
+                if gap_rel_err > max_gap_error {
                     return false;
                 }
             }
 
             let curr_len = span[1] - span[0];
             let len_rel_err = (curr_len as f32 - avg_len).abs() / avg_len;
-            if len_rel_err > 3.0 {
-            // if len_rel_err > 0.5 {
+            if len_rel_err > max_len_error {
                 return false;
             }
 

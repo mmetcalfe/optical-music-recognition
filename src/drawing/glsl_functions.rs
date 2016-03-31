@@ -70,7 +70,7 @@ pub const VERTEX_SHADER_POS_TEX_MAT : &'static str = r#"
 
 pub const ADAPTIVE_THRESHOLD : &'static str = r#"
 vec4 adaptive_threshold(sampler2D ycbcra_tex, ivec2 pix_1) {
-    const int half_width = 9;
+    const int half_width = 5;
     const int size = half_width*2+1;
     const int num_neighbours = size*size;
 
@@ -96,6 +96,7 @@ vec4 adaptive_threshold(sampler2D ycbcra_tex, ivec2 pix_1) {
     for (int i = 0; i < num_neighbours; ++i) {
         vec4 dev = neighborhood[i] - mean;
         stddev += dev * dev;
+        // stddev += abs(dev);
     }
 
     stddev /= num_neighbours;
@@ -106,13 +107,19 @@ vec4 adaptive_threshold(sampler2D ycbcra_tex, ivec2 pix_1) {
 
     float relerror = (col.x - mean.x) / mean.x;
 
-    if (relerror < -0.05) {
+    // return norm;
+    // return mean;
+
+    // if (relerror < -0.0) {
     // if (col.x - mean.x) {
-        // return vec4(0.0, col.y, col.z, 1.0);
-        return vec4(0.0, 0.0, 0.0, 1.0);
+    if (norm.x < -0.5) {
+        // return vec4(min(0.4, col.x * 0.5), col.y, col.z, 1.0);
+        return vec4(min(0.4, col.x), col.y, col.z, 1.0);
+        // return vec4(0.0, 0.0, 0.0, 1.0);
     }
 
     // return vec4(mean.x, mean.y, mean.z, 1.0);
-    return vec4(1.0, 0.0, 0.0, 1.0);
+    // return vec4(max(0.6, 1.0 - (1.0 - col.x) * 0.5), col.y, col.z, 1.0);
+    return vec4(max(0.6, col.x), col.y, col.z, 1.0);
 }
 "#;

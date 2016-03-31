@@ -1,6 +1,7 @@
 // use ffmpeg_camera::image_ycbcr;
 use ffmpeg_camera::image::Image;
 use ffmpeg_camera::image;
+use std::cmp;
 
 pub struct Segment {
     pub x: usize,
@@ -82,4 +83,18 @@ impl<'a, I : Image> Iterator for SegmentScanner<'a, I> {
             }
         }
     }
+}
+
+pub fn scan_entire_image<I : Image>(image: &I, num_lines: usize) -> Vec<Segment> {
+    let mut results = Vec::new();
+
+    let step = cmp::max(1, image.width() / num_lines);
+
+    for x in (0..image.width()).filter(|x| x % step == 0) {
+        let scanner = SegmentScanner::new(image, [x, 0]);
+
+        results.extend(scanner)
+    }
+
+    results
 }
