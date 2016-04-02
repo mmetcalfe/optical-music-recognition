@@ -118,9 +118,9 @@ fn main() {
 
         // Run RANSAC on the StaffCross points to find a line:
         let params = omr::ransac::RansacParams {
-            num_iterations: 50,
-            max_distance: 10.0,
-            min_inliers: 20,
+            num_iterations: 100,
+            max_distance: 111.0, // not currently used
+            min_inliers: 10,
         };
         let maybe_line = omr::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
 
@@ -129,8 +129,8 @@ fn main() {
             let pix_w = 2.0 * (1.0 / ycbcr_frame.width as f32);
             let col = [0.0, 0.0, 1.0, 1.0];
             let col_ext = [0.0, 1.0, 0.0, 1.0];
-            let p1 = ycbcr_frame.opengl_coords_for_point(line.a);
-            let p2 = ycbcr_frame.opengl_coords_for_point(line.b);
+            let p1 = ycbcr_frame.opengl_coords_for_point(line.a.centre());
+            let p2 = ycbcr_frame.opengl_coords_for_point(line.b.centre());
             draw_ctx.draw_line_extended(&mut target, p1, p2, pix_w * 5.0, col_ext);
             draw_ctx.draw_line(&mut target, p1, p2, pix_w * 5.0, col);
         }

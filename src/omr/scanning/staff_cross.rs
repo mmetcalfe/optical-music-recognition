@@ -7,6 +7,7 @@ use nalgebra as na;
 use omr::scanning::segment;
 use std::collections::LinkedList;
 use std::cmp;
+use geometry as gm;
 
 // Represents a the intersection of a straight line with a set of 5 staff lines.
 // Stores the coordinates of each of the 5 line intersections in image coordinates.
@@ -29,12 +30,36 @@ impl StaffCross {
         }
     }
 
+    // pub fn centre(&self) -> na::Vec2<f32> {
+    //     let sum_y : f32 = self.spans.iter().fold(0.0, |a, s| a + (s[0] + s[1]) as f32 / 2.0);
+    //     let avg_y = sum_y / self.spans.len() as f32;
+    //     let avg_x = self.x as f32;
+    //
+    //     na::Vec2::new(avg_x, avg_y)
+    // }
+
     pub fn centre(&self) -> na::Vec2<f32> {
-        let sum_y : f32 = self.spans.iter().fold(0.0, |a, s| a + (s[0] + s[1]) as f32 / 2.0);
-        let avg_y = sum_y / self.spans.len() as f32;
+        let mid_span = self.spans[2];
+
+        let avg_y = (mid_span[0] + mid_span[1]) as f32 / 2.0;
         let avg_x = self.x as f32;
 
         na::Vec2::new(avg_x, avg_y)
+    }
+
+    pub fn average_space_width(&self, line: &gm::Line) -> f32 {
+        let dists = self.span_points().iter()
+            .map(|pts| [line.distance_to_point(&pts[0]), line.distance_to_point(&pts[1])])
+            .collect::<Vec<[f32; 2]>>();
+
+        let spaces = dists.as_slice()
+            .windows(2)
+            .map(|w| (w[0][1] - w[1][0]).abs());
+
+        let sum : f32 = spaces.fold(0.0, |a, b| a + b);
+        let avg = sum / 4.0;
+
+        avg
     }
 
     fn add_segment(&mut self, segment: &segment::Segment) {
@@ -48,6 +73,27 @@ impl StaffCross {
 
     pub fn spans(&self) -> self::core::slice::Iter<[usize; 2]> {
         self.spans.iter()
+    }
+
+    pub fn span_points(&self) -> Vec<[na::Vec2<f32>; 2]> {
+        let to_vec = |span: &[usize; 2]| -> [na::Vec2<f32>; 2] {
+            let p1 = na::Vec2::new(self.x as f32, span[0] as f32 - 0.5);
+            let p2 = na::Vec2::new(self.x as f32, span[1] as f32 + 0.5);
+            [p1, p2]
+        };
+        self.spans.iter().map(to_vec).collect()
+    }
+
+    pub fn scan_direction(&self) -> na::Vec2<f32> {
+        // let p1 = na::Vec2::new(self.x as f32, self.spans[0][1] as f32 - 0.5);
+        // let p2 = na::Vec2::new(self.x as f32, self.spans[4][1] as f32 + 0.5);
+        //
+        // let diff = p2 - p1;
+        // let dir = na::normalize(&diff);
+        //
+        // dir
+
+        na::Vec2::new(0.0, 1.0)
     }
 
     // Returns whether the sequence of spans is regular enough that it could plausibly be a

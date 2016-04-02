@@ -1,6 +1,7 @@
 use nalgebra as na;
 use nalgebra::Norm;
 
+#[derive(Debug)]
 pub struct Line {
     pub a: na::Vec2<f32>,
     pub b: na::Vec2<f32>,

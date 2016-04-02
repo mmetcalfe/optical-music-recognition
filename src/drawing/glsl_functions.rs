@@ -70,7 +70,7 @@ pub const VERTEX_SHADER_POS_TEX_MAT : &'static str = r#"
 
 pub const ADAPTIVE_THRESHOLD : &'static str = r#"
 vec4 adaptive_threshold(sampler2D ycbcra_tex, ivec2 pix_1) {
-    const int half_width = 5;
+    const int half_width = 5; // Quite good.
     const int size = half_width*2+1;
     const int num_neighbours = size*size;
 
@@ -110,7 +110,7 @@ vec4 adaptive_threshold(sampler2D ycbcra_tex, ivec2 pix_1) {
     // return norm;
     // return mean;
 
-    // if (relerror < -0.0) {
+    // if (relerror < -0.5) {
     // if (col.x - mean.x) {
     if (norm.x < -0.5) {
         // return vec4(min(0.4, col.x * 0.5), col.y, col.z, 1.0);

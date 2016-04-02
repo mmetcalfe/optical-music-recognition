@@ -70,7 +70,7 @@ pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>) -> Opti
         // If the current fit is better than the current best fit:
         // println!("If the current fit is better than the current best fit:");
         if current_inliers.len() > best_state.inliers.len() {
-            if current_inliers.len() > params.min_inliers {
+            if current_inliers.len() >= params.min_inliers {
                 // Replace the best model:
                 best_state = RansacState {
                     // samples: samples,
