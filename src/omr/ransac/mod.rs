@@ -3,6 +3,56 @@ pub mod staff_cross;
 // use rand::Rng;
 use rand;
 
+pub fn choose(n: usize, k: usize) -> usize {
+    // https://en.wikipedia.org/wiki/Binomial_coefficient#Multiplicative_formula
+
+    if n == 0 {
+        return 1;
+    }
+
+    let mut sum = 0.0;
+    for i in 1..k+1 {
+        sum += (n + 1 - i) as f64 / i as f64
+    }
+
+    sum.round() as usize
+}
+
+pub fn calculate_num_iterations(
+    // Total number of points in the dataset:
+    num_points: usize,
+
+    // Estimated number of points belonging to the model that we wish to find:
+    // Note: This is the set of very accurate points, any 'num_points' of which would fit an
+    // acceptable model.
+    // We assume that the rest of the dataset is noise.
+    num_inliers: usize,
+
+    // Points required to fit a candidate model:
+    points_per_model: usize,
+
+    // The required proability of finding the model:
+    success_probability: f32
+    ) -> usize {
+    let n = num_points;
+    let k = num_inliers;
+    let m = points_per_model;
+    let p = success_probability as f64;
+
+    // Ways to choose source points correctly:
+    let k_m = choose(k, m);
+
+    // Ways to choose source points overall:
+    let n_m = choose(n, m);
+
+    // Probability of choosing correctly in a single iteration:
+    let f = k_m as f64 / n_m as f64;
+
+    // Iterations required to have probability p of choosing correctly at least once:
+    (1.0 - p).log(1.0 - f) as usize
+}
+
+
 // Fit stafflines using RANSAC:
 
 pub trait RansacModel<Model, Point> {
