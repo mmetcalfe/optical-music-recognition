@@ -56,15 +56,26 @@ pub const VERTEX_SHADER_POS_TEX : &'static str = r#"
     }
 "#;
 
-pub const VERTEX_SHADER_POS_TEX_MAT : &'static str = r#"
+pub const VERTEX_SHADER_POS_TEX_MV : &'static str = r#"
     #version 140
     in vec2 position;
     in vec2 tex_coords;
     out vec2 v_tex_coords;
-    uniform mat4 matrix;
+    uniform mat4 model;
+    uniform mat4 view;
     void main() {
         v_tex_coords = tex_coords;
-        gl_Position = matrix * vec4(position, 0.0, 1.0);
+        gl_Position = view * model * vec4(position, 0.0, 1.0);
+    }
+"#;
+
+pub const VERTEX_SHADER_POS_MV : &'static str = r#"
+    #version 140
+    in vec2 position;
+    uniform mat4 model;
+    uniform mat4 view;
+    void main() {
+        gl_Position = view * model * vec4(position, 0.0, 1.0);
     }
 "#;
 

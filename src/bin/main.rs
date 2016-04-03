@@ -43,7 +43,9 @@ fn main() {
     // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
     // let texture = glium::texture::Texture2d::new(&display, image).unwrap();
 
-    let draw_ctx = drawing::context::DrawingContext::new(&display);
+    let mut draw_ctx = drawing::context::DrawingContext::new(&display);
+    draw_ctx.set_view_matrices_for_image_dimensions(320, 240);
+
     // let img_pane = drawing::image_pane::ImagePane::new(&display);
     // let rect_buff = drawing::rectangle_buffer::RectangleBuffer::new(&display);
 
@@ -137,23 +139,23 @@ fn main() {
             }
             let avg_line_width = line_width_sum / state.inliers.len() as f32;
 
-            let pix_h = 2.0 * (1.0 / ycbcr_frame.height as f32);
+            // let pix_h = 1.0; //2.0 * (1.0 / ycbcr_frame.height as f32);
             let p1 = ycbcr_frame.opengl_coords_for_point(line.a);
             let p2 = ycbcr_frame.opengl_coords_for_point(line.b);
 
             let staff_col = [0.0, 0.0, 1.0, 1.0];
             draw_ctx.draw_staff(&mut target, p1, p2,
-                pix_h * avg_space_width,
-                pix_h * avg_line_width,
+                avg_space_width,
+                avg_line_width,
                 staff_col
             );
 
             // Draw centre line:
-            let line_thickness = pix_h * 1.0;
+            let lw = 1.0;
             let col_ext = [0.0, 1.0, 0.0, 1.0];
-            draw_ctx.draw_line_extended(&mut target, p1, p2, line_thickness, col_ext);
+            draw_ctx.draw_line_extended(&mut target, p1, p2, lw, col_ext);
             let col = [0.0, 0.0, 1.0, 1.0];
-            draw_ctx.draw_line(&mut target, p1, p2, line_thickness, col);
+            draw_ctx.draw_line(&mut target, p1, p2, lw, col);
         }
 
         target.finish().unwrap();

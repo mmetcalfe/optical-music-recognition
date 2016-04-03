@@ -48,17 +48,24 @@ pub struct ImagePane<'a> {
     ycbcr_drawing_program : glium::Program,
     adaptive_threshold_program : glium::Program,
     identity_program : glium::Program,
+    view_matrix: [[f32; 4]; 4],
 }
 
 impl<'a> ImagePane<'a> {
+
+    pub fn set_view_matrix(&mut self, matrix: &[[f32; 4]; 4]) {
+        self.view_matrix = matrix.clone()
+    }
+
     pub fn draw_texture_to_framebuffer(&self, target: &mut glium::framebuffer::SimpleFrameBuffer, program: &glium::Program, texture: &glium::texture::Texture2d) {
         let uniforms = uniform! {
-            matrix: [
+            model: [
                 [1.0, 0.0, 0.0, 0.0],
                 [0.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32],
             ],
+            view: self.view_matrix,
             tex: texture,
         };
         target.draw(
@@ -72,12 +79,13 @@ impl<'a> ImagePane<'a> {
 
     pub fn draw_texture(&self, target: &mut glium::Frame, program: &glium::Program, texture: glium::texture::Texture2d) {
         let uniforms = uniform! {
-            matrix: [
+            model: [
                 [1.0, 0.0, 0.0, 0.0],
                 [0.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32],
             ],
+            view: self.view_matrix,
             tex: &texture,
         };
         target.draw(
@@ -91,12 +99,13 @@ impl<'a> ImagePane<'a> {
 
     pub fn draw_texture_flipped(&self, target: &mut glium::Frame, program: &glium::Program, texture: glium::texture::Texture2d) {
         let uniforms = uniform! {
-            matrix: [
+            model: [
                 [1.0, 0.0, 0.0, 0.0],
                 [0.0, -1.0, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32],
             ],
+            view: self.view_matrix,
             tex: &texture,
         };
         target.draw(
@@ -254,7 +263,7 @@ impl<'a> ImagePane<'a> {
 
         glium::Program::from_source(
             display,
-            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MV,
             &fragment_shader_src,
             None
         ).unwrap()
@@ -279,7 +288,7 @@ impl<'a> ImagePane<'a> {
 
         glium::Program::from_source(
             display,
-            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MV,
             &fragment_shader_src,
             None
         ).unwrap()
@@ -304,7 +313,7 @@ impl<'a> ImagePane<'a> {
 
         glium::Program::from_source(
             display,
-            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MV,
             &fragment_shader_src,
             None
         ).unwrap()
@@ -326,7 +335,7 @@ impl<'a> ImagePane<'a> {
 
         glium::Program::from_source(
             display,
-            glsl_functions::VERTEX_SHADER_POS_TEX_MAT,
+            glsl_functions::VERTEX_SHADER_POS_TEX_MV,
             &fragment_shader_src,
             None
         ).unwrap()
@@ -357,6 +366,12 @@ impl<'a> ImagePane<'a> {
             ycbcr_drawing_program: Self::make_ycbcr_drawing_program(display),
             adaptive_threshold_program: Self::make_adaptive_threshold_program(display),
             identity_program: Self::make_identity_program(display),
+            view_matrix: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32],
+            ],
         }
     }
 }

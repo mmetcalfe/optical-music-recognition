@@ -26,6 +26,34 @@ impl<'a> DrawingContext<'a> {
         }
     }
 
+    pub fn set_view_matrices_for_image_dimensions(&mut self, width: usize, height: usize) {
+        let xs = 2.0 / width as f32;
+        let ys = 2.0 / height as f32;
+        // let aspect = (width as f32) / (height as f32);
+
+        let hw = width as f32 / 2.0;
+        let hh = height as f32 / 2.0;
+
+        // xo, yo = (0, 0)
+        // w, h = framebufferSize
+        // vpMat = np.matrix([
+        // [w/2.0, 0, 0, w/2.0 + xo],
+        // [0, h/2.0, 0, h/2.0 + yo],
+        // [0, 0, 1, 0],
+        // [0, 0, 0, 1]
+        // ], np.float32)
+
+        let matrix = [
+            [xs, 0.0, 0.0, 0.0],
+            [0.0, ys, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0, 1.0f32],
+        ];
+
+        // self.image_pane.set_view_matrix(&matrix);
+        self.rectangle_buffer.set_view_matrix(&matrix);
+    }
+
     pub fn draw_rectangle(&self, target : &mut glium::Frame, rect : &RotatedRectangle, colour : [f32; 4]) {
         self.rectangle_buffer.draw_rectangle(target, rect, colour)
     }
@@ -65,8 +93,8 @@ impl<'a> DrawingContext<'a> {
         let dir = na::normalize(&(p2 - p1));
         let avg = (p1 + p2) / 2.0;
 
-        let e1 = avg + dir * 5.0;
-        let e2 = avg - dir * 5.0;
+        let e1 = avg + dir * 10000.0;
+        let e2 = avg - dir * 10000.0;
 
         self.draw_line(target, e1, e2, lw, colour);
     }
@@ -88,7 +116,7 @@ impl<'a> DrawingContext<'a> {
     }
 
     pub fn draw_staff_cross(&self, mut target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, cross: &StaffCross, colour: [f32; 4]) {
-        let pix_h = 2.0 * (1.0 / ycbcr_frame.height as f32);
+        let pix_h = 1.0; // 2.0 * (1.0 / ycbcr_frame.height as f32);
         let scan_draw_cols = 1.0;
 
         let x = cross.x;

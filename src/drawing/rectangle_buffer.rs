@@ -1,5 +1,6 @@
 use glium;
 use glium::Surface;
+use super::glsl_functions;
 
 pub struct RotatedRectangle {
     pub position : [f32; 2],
@@ -14,12 +15,17 @@ struct Vertex {
 implement_vertex!(Vertex, position);
 
 pub struct RectangleBuffer {
-    vertex_buffer : glium::VertexBuffer<Vertex>,
-    index_buffer : glium::index::NoIndices,
-    shader_program : glium::Program,
+    vertex_buffer: glium::VertexBuffer<Vertex>,
+    index_buffer: glium::index::NoIndices,
+    shader_program: glium::Program,
+    view_matrix: [[f32; 4]; 4],
 }
 
 impl RectangleBuffer {
+    pub fn set_view_matrix(&mut self, matrix: &[[f32; 4]; 4]) {
+        self.view_matrix = matrix.clone()
+    }
+
     pub fn draw_rectangle(&self, target : &mut glium::Frame, rect : &RotatedRectangle, colour : [f32; 4]) {
         let x = rect.position[0];
         let y = rect.position[1];
@@ -37,12 +43,13 @@ impl RectangleBuffer {
         // let yr = r21*x + r22*y;
 
         let uniforms = uniform! {
-            matrix: [
+            model: [
                 [xs*r11, xs*r12, 0.0, 0.0],
                 [ys*r21, ys*r22, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [x, y, 0.0, 1.0f32],
             ],
+            view: self.view_matrix,
             line_col: colour,
         };
 
@@ -69,15 +76,6 @@ impl RectangleBuffer {
         let vertex_buffer = glium::VertexBuffer::new(display, &shape).unwrap();
         let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
-        let vertex_shader_src = r#"
-            #version 140
-            in vec2 position;
-            uniform mat4 matrix;
-            void main() {
-                gl_Position = matrix * vec4(position, 0.0, 1.0);
-            }
-        "#;
-
         let fragment_shader_src = r#"
             #version 140
             out vec4 color;
@@ -87,12 +85,23 @@ impl RectangleBuffer {
             }
         "#;
 
-        let program = glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap();
+        let program = glium::Program::from_source(
+            display,
+            glsl_functions::VERTEX_SHADER_POS_MV,
+            fragment_shader_src,
+            None
+        ).unwrap();
 
         RectangleBuffer {
             vertex_buffer: vertex_buffer,
             index_buffer: indices,
-            shader_program: program
+            shader_program: program,
+            view_matrix: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32],
+            ],
         }
     }
 }

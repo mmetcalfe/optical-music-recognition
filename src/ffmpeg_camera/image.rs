@@ -33,18 +33,20 @@ pub trait Image : Clone {
         let px = point[0];
         let py = point[1];
 
-        // // Half-pixel offsets:
-        // let ox = 0.5 / width;
-        // let oy = 0.5 / height;
+        // // // Half-pixel offsets:
+        // // let ox = 0.5 / width;
+        // // let oy = 0.5 / height;
+        //
+        // // Normalised coordinates in [0, 1]:
+        // let nx = (px + 0.5) / self.width() as f32;
+        // let ny = (py + 0.5) / self.height() as f32;
+        //
+        // // OpenGL coordinates in [-1, 1]:
+        // let rx = nx * 2.0 - 1.0;
+        // let ry = ny * 2.0 - 1.0;
+        // na::Vec2::new(rx, -ry)
 
-        // Normalised coordinates in [0, 1]:
-        let nx = (px + 0.5) / self.width() as f32;
-        let ny = (py + 0.5) / self.height() as f32;
-
-        // OpenGL coordinates in [-1, 1]:
-        let rx = nx * 2.0 - 1.0;
-        let ry = ny * 2.0 - 1.0;
-        na::Vec2::new(rx, -ry)
+        na::Vec2::new(px as f32, -py as f32)
     }
 
     fn opengl_coords_for_index(&self, index: [usize; 2]) -> na::Vec2<f32> {
