@@ -127,7 +127,7 @@ vec4 adaptive_threshold(sampler2D ycbcra_tex, ivec2 pix_1) {
         // if (col.x - mean.x) {
 
         // Require pixel to be significantly darker than its neighbourhood:
-        if (norm.x < -0.5) {
+        if (norm.x < -0.3) {
             // return vec4(min(0.4, col.x * 0.5), col.y, col.z, 1.0);
             return vec4(min(0.4, col.x), col.y, col.z, 1.0);
             // return vec4(0.0, 0.0, 0.0, 1.0);

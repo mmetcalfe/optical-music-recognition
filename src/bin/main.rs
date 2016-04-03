@@ -26,10 +26,9 @@ fn main() {
     //     ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (1280, 720))
     //         .expect("Failed to open camera.");
 
-    let img_w = 320;
-    let img_h = 240;
-    // let img_w = 1280;
-    // let img_h = 720;
+    // let (img_w, img_h) = (320, 240);
+    let (img_w, img_h) = (1280, 720);
+    // let (img_w, img_h) = (1920, 1080);
 
     let mut camera =
         ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (img_w, img_h))
@@ -75,7 +74,7 @@ fn main() {
         let staff_cross_col = [0.6, 0.2, 0.0, 1.0];
 
         // Scan entire image for StaffCross points:
-        let num_scan_lines = std::cmp::min(200, img_w / 4);
+        let num_scan_lines = std::cmp::min(400, img_w / 4);
         let cross_points = omr::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
 
         // Draw detected StaffCross points:
@@ -122,54 +121,16 @@ fn main() {
         let params = omr::ransac::RansacParams {
             num_iterations: num_iterations,
             max_distance: 111.0, // not currently used
-            min_inliers: 10,
+            min_inliers: 15,
         };
         // let maybe_line = omr::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
-        let state = omr::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
 
-        // Draw the detected line:
-        // if let Some(line) = maybe_line {
-        if let Some(line) = state.model {
-            let line = gm::Line::new(line.a.centre(), line.b.centre());
+        // let state = omr::ransac::ransac::<StaffCrossLineModel,_,_>(&params, &cross_points);
+        // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
-            // Draw inliers:
-            let inliers_col = [1.0, 0.0, 0.0, 1.0];
-            for cross in state.inliers.iter() {
-                draw_ctx.draw_staff_cross(&mut target, &ycbcr_frame, &cross, inliers_col);
-            }
-
-            // Draw staff lines:
-            let mut space_width_sum = 0.0;
-            for pt in &state.inliers {
-                let pt_space_width = pt.average_space_width(&line);
-                space_width_sum += pt_space_width
-            }
-            let avg_space_width = space_width_sum / state.inliers.len() as f32;
-
-            let mut line_width_sum = 0.0;
-            for pt in &state.inliers {
-                let pt_line_width = pt.average_line_width(&line);
-                line_width_sum += pt_line_width
-            }
-            let avg_line_width = line_width_sum / state.inliers.len() as f32;
-
-            // let pix_h = 1.0; //2.0 * (1.0 / ycbcr_frame.height as f32);
-            let p1 = ycbcr_frame.opengl_coords_for_point(line.a);
-            let p2 = ycbcr_frame.opengl_coords_for_point(line.b);
-
-            let staff_col = [0.0, 0.0, 1.0, 1.0];
-            draw_ctx.draw_staff(&mut target, p1, p2,
-                avg_space_width,
-                avg_line_width,
-                staff_col
-            );
-
-            // Draw centre line:
-            let lw = 1.0;
-            let col_ext = [0.0, 1.0, 0.0, 1.0];
-            draw_ctx.draw_line_extended(&mut target, p1, p2, lw, col_ext);
-            let col = [0.0, 0.0, 1.0, 1.0];
-            draw_ctx.draw_line(&mut target, p1, p2, lw, col);
+        let states = omr::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
+        for state in states {
+            draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
         }
 
         target.finish().unwrap();

@@ -67,10 +67,14 @@ pub trait RansacModel<Model, Point> {
     // Find the number of points within a given threshold of the model
     fn find_inliers(f32, &Vec<Point>, &Model) -> Vec<Point>;
 
+    // Return all points that are not within a given threshold of the model
+    fn find_outliers(f32, &Vec<Point>, &Model) -> Vec<Point>;
+
     // Find the model that best fits a large set of points
     fn fit_model(&Vec<Point>) -> Option<Model>;
   }
 
+#[derive(Clone, Copy)]
 pub struct RansacParams {
     // Number of attempted model fits
     pub num_iterations : usize,
@@ -88,7 +92,7 @@ pub struct RansacState<Model, Point> {
     pub inliers : Vec<Point>,
 }
 
-pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>)
+pub fn ransac<RM, Model, Point>(params: &RansacParams, data: &Vec<Point>)
     -> RansacState<Model, Point>
     // -> Option<Model>
     where RM: RansacModel<Model, Point>
@@ -136,4 +140,41 @@ pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>)
 
     // best_state.model
     best_state
+}
+
+pub fn ransac_multiple<RM, Model, Point>(params: &RansacParams, data: &Vec<Point>)
+    -> Vec<RansacState<Model, Point>>
+    // -> Option<Model>
+    where RM: RansacModel<Model, Point>
+        , Point: Clone {
+
+    let mut states = Vec::new();
+    let mut new_data = data.clone();
+
+    // println!("START");
+    loop {
+        let num_iterations = calculate_num_iterations(
+            new_data.len(), // num_points
+            data.len() / 20, // num_inliers
+            RM::num_required(), // points_per_model
+            0.75 // success_probability
+        );
+        let mut new_params = params.clone();
+        new_params.num_iterations = num_iterations;
+        // println!("num_iterations: {:?}", num_iterations);
+
+        let state = ransac::<RM, Model, Point>(&new_params, &new_data);
+        // let state = ransac::<RM, Model, Point>(params, &new_data);
+
+        if state.model.is_some() {
+            if let Some(ref model) = state.model {
+                new_data = RM::find_outliers(params.max_distance, &new_data, &model);
+            }
+            states.push(state);
+        } else {
+            break;
+        }
+    }
+
+    states
 }

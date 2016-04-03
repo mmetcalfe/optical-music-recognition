@@ -10,6 +10,9 @@ use glium;
 use nalgebra as na;
 
 use omr::scanning::staff_cross::StaffCross;
+use omr::ransac::staff_cross::StaffCrossLine;
+use omr::ransac::RansacState;
+use geometry as gm;
 
 // use std::f32;
 
@@ -135,6 +138,56 @@ impl<'a> DrawingContext<'a> {
 
             self.draw_line(&mut target, p1, p2, pix_h * scan_draw_cols, colour);
             // self.draw_line(&mut target, p1, p2, (p2[1] - p1[1]).abs(), colour);
+        }
+    }
+
+    pub fn draw_ransac_state(
+        &self,
+        mut target: &mut glium::Frame,
+        ycbcr_frame : &image_ycbcr::Image,
+        state: &RansacState<StaffCrossLine, StaffCross>) {
+
+        if let Some(ref line) = state.model {
+            let line = gm::Line::new(line.a.centre(), line.b.centre());
+
+            // Draw inliers:
+            let inliers_col = [1.0, 0.0, 0.0, 1.0];
+            for cross in state.inliers.iter() {
+                self.draw_staff_cross(&mut target, &ycbcr_frame, &cross, inliers_col);
+            }
+
+            // Draw staff lines:
+            let mut space_width_sum = 0.0;
+            for pt in &state.inliers {
+                let pt_space_width = pt.average_space_width(&line);
+                space_width_sum += pt_space_width
+            }
+            let avg_space_width = space_width_sum / state.inliers.len() as f32;
+
+            let mut line_width_sum = 0.0;
+            for pt in &state.inliers {
+                let pt_line_width = pt.average_line_width(&line);
+                line_width_sum += pt_line_width
+            }
+            let avg_line_width = line_width_sum / state.inliers.len() as f32;
+
+            // let pix_h = 1.0; //2.0 * (1.0 / ycbcr_frame.height as f32);
+            let p1 = ycbcr_frame.opengl_coords_for_point(line.a);
+            let p2 = ycbcr_frame.opengl_coords_for_point(line.b);
+
+            let staff_col = [0.0, 0.0, 1.0, 1.0];
+            self.draw_staff(&mut target, p1, p2,
+                avg_space_width,
+                avg_line_width,
+                staff_col
+            );
+
+            // Draw centre line:
+            let lw = 1.0;
+            let col_ext = [0.0, 1.0, 0.0, 1.0];
+            self.draw_line_extended(&mut target, p1, p2, lw, col_ext);
+            let col = [0.0, 0.0, 1.0, 1.0];
+            self.draw_line(&mut target, p1, p2, lw, col);
         }
     }
 
