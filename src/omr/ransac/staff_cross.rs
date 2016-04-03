@@ -26,6 +26,15 @@ impl StaffCrossLine {
 
         (avg_a + avg_b) / 2.0
     }
+
+    pub fn average_line_width(&self) -> f32 {
+        let line = gm::Line::new(self.a.centre(), self.b.centre());
+
+        let avg_a = self.a.average_line_width(&line);
+        let avg_b = self.b.average_line_width(&line);
+
+        (avg_a + avg_b) / 2.0
+    }
 }
 
 pub struct StaffCrossLineModel;
@@ -44,6 +53,7 @@ impl RansacModel<StaffCrossLine, StaffCross> for StaffCrossLineModel {
 
     fn find_inliers(max_dist: f32, data: &Vec<StaffCross>, model: &StaffCrossLine) -> Vec<StaffCross> {
         let space_width = model.average_space_width();
+        let line_width = model.average_line_width();
         let line = gm::Line::new(model.a.centre(), model.b.centre());
         let line_dir = na::normalize(&(line.b - line.a));
 
@@ -69,6 +79,13 @@ impl RansacModel<StaffCrossLine, StaffCross> for StaffCrossLineModel {
             let pt_space_width = pt.average_space_width(&line);
             let space_error = (pt_space_width - space_width).abs() / space_width;
             if space_error > 0.5 {
+                continue;
+            }
+
+            // Ignore if sample has a staff-line width too different from the model.
+            let pt_line_width = pt.average_line_width(&line);
+            let line_error = (pt_line_width - line_width).abs() / line_width;
+            if line_error > 1.0 {
                 continue;
             }
 

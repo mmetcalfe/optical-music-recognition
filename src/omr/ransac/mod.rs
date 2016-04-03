@@ -32,13 +32,15 @@ pub struct RansacParams {
     pub min_inliers : usize,
 }
 
-struct RansacState<Model, Point> {
+pub struct RansacState<Model, Point> {
     // samples : Vec<Point>,
-    model : Option<Model>,
-    inliers : Vec<Point>,
+    pub model : Option<Model>,
+    pub inliers : Vec<Point>,
 }
 
-pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>) -> Option<Model>
+pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>)
+    -> RansacState<Model, Point>
+    // -> Option<Model>
     where RM: RansacModel<Model, Point>
         , Point: Clone {
     let mut rng = rand::thread_rng();
@@ -51,7 +53,8 @@ pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>) -> Opti
 
     // If there are too few points, just return None:
     if data.len() < RM::num_required() {
-        return None;
+        // return None;
+        return best_state;
     }
 
     for _ in 0..params.num_iterations {
@@ -81,5 +84,6 @@ pub fn ransac<RM, Model, Point>(params: RansacParams, data: &Vec<Point>) -> Opti
         }
     }
 
-    best_state.model
+    // best_state.model
+    best_state
 }

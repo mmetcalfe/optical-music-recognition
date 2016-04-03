@@ -17,6 +17,10 @@ impl Line {
     }
 
     pub fn distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
+        self.signed_distance_to_point(point).abs()
+    }
+
+    pub fn signed_distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
         let dir = self.a - self.b;
         let norm = na::Vec2::new(dir[1], -dir[0]);
 
@@ -25,7 +29,7 @@ impl Line {
         let ap = *point - self.a;
         let dot = na::dot(&ap, &norm);
 
-        let dist = (dot).abs() / norm_len;
+        let dist = dot / norm_len;
 
         dist
     }

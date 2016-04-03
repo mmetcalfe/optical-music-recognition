@@ -48,16 +48,45 @@ impl StaffCross {
     }
 
     pub fn average_space_width(&self, line: &gm::Line) -> f32 {
+
+        // println!("self.spans: {:?}", self.spans);
+        // println!("self.span_points(): {:?}", self.span_points());
+
         let dists = self.span_points().iter()
-            .map(|pts| [line.distance_to_point(&pts[0]), line.distance_to_point(&pts[1])])
+            .map(|pts| [line.signed_distance_to_point(&pts[0]), line.signed_distance_to_point(&pts[1])])
             .collect::<Vec<[f32; 2]>>();
+
+        // println!("dists: {:?}", dists);
 
         let spaces = dists.as_slice()
             .windows(2)
-            .map(|w| (w[0][1] - w[1][0]).abs());
+            .map(|w| (w[0][1] - w[1][0]).abs())
+            .collect::<Vec<f32>>();
 
-        let sum : f32 = spaces.fold(0.0, |a, b| a + b);
+        // println!("spaces: {:?}", spaces);
+
+        let sum : f32 = spaces.iter()
+            .fold(0.0, |a, b| a + b);
+
+        // println!("sum: {:?}", sum);
+
         let avg = sum / 4.0;
+
+        // println!("avg: {:?}", avg);
+
+        avg
+    }
+
+    pub fn average_line_width(&self, line: &gm::Line) -> f32 {
+        let dists = self.span_points().iter()
+            .map(|pts| [line.signed_distance_to_point(&pts[0]), line.signed_distance_to_point(&pts[1])])
+            .collect::<Vec<[f32; 2]>>();
+
+        let line_widths = dists.iter()
+            .map(|w| (w[1] - w[0]).abs());
+
+        let sum : f32 = line_widths.fold(0.0, |a, b| a + b);
+        let avg = sum / 5.0;
 
         avg
     }
@@ -77,8 +106,8 @@ impl StaffCross {
 
     pub fn span_points(&self) -> Vec<[na::Vec2<f32>; 2]> {
         let to_vec = |span: &[usize; 2]| -> [na::Vec2<f32>; 2] {
-            let p1 = na::Vec2::new(self.x as f32, span[0] as f32 - 0.5);
-            let p2 = na::Vec2::new(self.x as f32, span[1] as f32 + 0.5);
+            let p1 = na::Vec2::new(self.x as f32 + 0.5, span[0] as f32 - 0.5);
+            let p2 = na::Vec2::new(self.x as f32 + 0.5, span[1] as f32 + 0.5);
             [p1, p2]
         };
         self.spans.iter().map(to_vec).collect()
