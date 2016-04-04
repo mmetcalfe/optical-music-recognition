@@ -9,6 +9,8 @@ glium = "*"
 nalgebra = "0.5.1"
 rand = "0.3.14"
 
+GSL = "0.4"
+
 # piston2d-graphics = "*"
 # piston2d-glium_graphics = "*"
 # piston = "*"

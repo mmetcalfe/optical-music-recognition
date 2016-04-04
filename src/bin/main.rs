@@ -10,8 +10,10 @@ use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
 use optical_music_recognition::ffmpeg_camera::image::Image;
 use optical_music_recognition::drawing;
 use optical_music_recognition::omr;
+use optical_music_recognition::math;
 // use optical_music_recognition::geometry;
 use optical_music_recognition::omr::ransac::staff_cross::StaffCrossLineModel;
+use optical_music_recognition::omr::scanning::staff_cross::StaffCross;
 // use std::io::Cursor;
 use glium::DisplayBuild;
 use glium::Surface;
@@ -131,6 +133,15 @@ fn main() {
         let states = omr::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
         for state in states {
             draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
+
+            let centres : Vec<na::Vec2<f32>> = state.inliers.iter()
+                // .take(5)
+                .map(|c| c.centre()).collect();
+
+            let best_line = math::fit_line(&centres);
+            let p1 = ycbcr_frame.opengl_coords_for_point(best_line.a);
+            let p2 = ycbcr_frame.opengl_coords_for_point(best_line.b);
+            draw_ctx.draw_line_extended(&mut target, p1, p2, 5.0, [1.0, 0.5, 0.5, 1.0]);
         }
 
         target.finish().unwrap();
