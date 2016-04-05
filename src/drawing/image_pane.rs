@@ -35,10 +35,10 @@ pub fn texture_to_image(texture : &glium::texture::Texture2d) -> image_ycbcr::Im
 
 #[derive(Copy, Clone)]
 struct Vertex {
-    position: [f32; 2],
+    vertex_pos: [f32; 2],
     tex_coords: [f32; 2],
 }
-implement_vertex!(Vertex, position, tex_coords);
+implement_vertex!(Vertex, vertex_pos, tex_coords);
 
 pub struct ImagePane<'a> {
     display : &'a glium::Display,
@@ -346,10 +346,10 @@ impl<'a> ImagePane<'a> {
         let v = 1.0;
         let vx = -v;
         let vy = -v;
-        let vertex1 = Vertex { position: [-vx, -vy], tex_coords: [1.0, 1.0] };
-        let vertex2 = Vertex { position: [ vx, -vy], tex_coords: [0.0, 1.0] };
-        let vertex3 = Vertex { position: [-vx, vy], tex_coords: [1.0, 0.0] };
-        let vertex4 = Vertex { position: [ vx, vy], tex_coords: [0.0, 0.0] };
+        let vertex1 = Vertex { vertex_pos: [-vx, -vy], tex_coords: [1.0, 1.0] };
+        let vertex2 = Vertex { vertex_pos: [ vx, -vy], tex_coords: [0.0, 1.0] };
+        let vertex3 = Vertex { vertex_pos: [-vx, vy], tex_coords: [1.0, 0.0] };
+        let vertex4 = Vertex { vertex_pos: [ vx, vy], tex_coords: [0.0, 0.0] };
         let shape = vec![
             vertex1, vertex2, vertex3,
             vertex3, vertex4, vertex2,

@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate glium;
 extern crate nalgebra as na;
+extern crate time;
 // extern crate image;
 
 // use std::f32;
@@ -19,6 +20,9 @@ use glium::DisplayBuild;
 use glium::Surface;
 use optical_music_recognition::geometry as gm;
 use std::cmp;
+
+use time::Duration;
+use time::SteadyTime;
 
 fn main() {
     // let mut camera =
@@ -55,7 +59,9 @@ fn main() {
     // let img_pane = drawing::image_pane::ImagePane::new(&display);
     // let rect_buff = drawing::rectangle_buffer::RectangleBuffer::new(&display);
 
+    let mut frame_start_time = SteadyTime::now();
     loop {
+
         let webcam_frame = camera.get_image_uyvy().unwrap();
         // let webcam_frame = camera.get_image_ycbcr().unwrap();
 
@@ -66,7 +72,6 @@ fn main() {
 
         // ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
 
-
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
@@ -76,13 +81,15 @@ fn main() {
         let staff_cross_col = [0.6, 0.2, 0.0, 1.0];
 
         // Scan entire image for StaffCross points:
-        let num_scan_lines = std::cmp::min(400, img_w / 4);
+        let num_scan_lines = std::cmp::min(640, img_w / 2);
         let cross_points = omr::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
 
         // Draw detected StaffCross points:
-        for cross in cross_points.iter() {
-            draw_ctx.draw_staff_cross(&mut target, &ycbcr_frame, &cross, staff_cross_col);
-        }
+        // for cross in &cross_points {
+        //     draw_ctx.draw_staff_cross(&mut target, &ycbcr_frame, &cross, staff_cross_col);
+        // }
+        draw_ctx.draw_staff_crosses(&mut target, &ycbcr_frame, &cross_points, staff_cross_col);
+
 
         // // Draw segments:
         // let segments = omr::scanning::segment::scan_entire_image(&ycbcr_frame, num_scan_lines);
@@ -131,7 +138,7 @@ fn main() {
         // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
         let states = omr::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
-        for state in states {
+        for state in &states {
             draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
             let centres : Vec<na::Vec2<f32>> = state.inliers.iter()
@@ -143,6 +150,19 @@ fn main() {
             let p2 = ycbcr_frame.opengl_coords_for_point(best_line.b);
             draw_ctx.draw_line_extended(&mut target, p1, p2, 5.0, [1.0, 0.5, 0.5, 1.0]);
         }
+
+        let frame_duration = SteadyTime::now() - frame_start_time;
+        frame_start_time = SteadyTime::now();
+        let mspf = frame_duration.num_milliseconds();
+        let fps = (1000.0 / (mspf as f32));
+        let time_str = format!("{} ms/frame, {} fps", mspf, fps);
+        draw_ctx.draw_string(
+            &mut target,
+            &time_str,
+            na::Vec2::<f32>::new(-1.0, -1.0),
+            0.03,
+            (0.0,0.0,0.0,1.0)
+        );
 
         target.finish().unwrap();
 

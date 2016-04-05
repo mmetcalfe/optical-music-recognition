@@ -45,37 +45,37 @@ vec4 convert_ycbcra_rgba(vec4 ycbcra) {
 
 pub const VERTEX_SHADER_POS_TEX : &'static str = r#"
     #version 140
-    in vec2 position;
+    in vec2 vertex_pos;
     in vec2 tex_coords;
     out vec2 v_tex_coords;
     // uniform mat4 matrix;
     void main() {
         v_tex_coords = tex_coords;
-        // gl_Position = matrix * vec4(position, 0.0, 1.0);
-        gl_Position = vec4(position, 0.0, 1.0);
+        // gl_Position = matrix * vec4(vertex_pos, 0.0, 1.0);
+        gl_Position = vec4(vertex_pos, 0.0, 1.0);
     }
 "#;
 
 pub const VERTEX_SHADER_POS_TEX_MV : &'static str = r#"
     #version 140
-    in vec2 position;
+    in vec2 vertex_pos;
     in vec2 tex_coords;
     out vec2 v_tex_coords;
     uniform mat4 model;
     uniform mat4 view;
     void main() {
         v_tex_coords = tex_coords;
-        gl_Position = view * model * vec4(position, 0.0, 1.0);
+        gl_Position = view * model * vec4(vertex_pos, 0.0, 1.0);
     }
 "#;
 
 pub const VERTEX_SHADER_POS_MV : &'static str = r#"
     #version 140
-    in vec2 position;
+    in vec2 vertex_pos;
     uniform mat4 model;
     uniform mat4 view;
     void main() {
-        gl_Position = view * model * vec4(position, 0.0, 1.0);
+        gl_Position = view * model * vec4(vertex_pos, 0.0, 1.0);
     }
 "#;
 

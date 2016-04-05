@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate glium;
+extern crate glium_text;
 extern crate nalgebra;
 extern crate rand;
 extern crate rgsl;

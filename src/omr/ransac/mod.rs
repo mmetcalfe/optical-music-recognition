@@ -1,7 +1,8 @@
 pub mod staff_cross;
 
-// use rand::Rng;
 use rand;
+use rand::SeedableRng;
+use rand::Rng;
 
 pub fn choose(n: usize, k: usize) -> usize {
     // https://en.wikipedia.org/wiki/Binomial_coefficient#Multiplicative_formula
@@ -97,7 +98,9 @@ pub fn ransac<RM, Model, Point>(params: &RansacParams, data: &Vec<Point>)
     // -> Option<Model>
     where RM: RansacModel<Model, Point>
         , Point: Clone {
-    let mut rng = rand::thread_rng();
+    // let mut thread_rng = rand::thread_rng();
+    // let mut rng = rand::XorShiftRng::from_seed(thread_rng.gen::<[u32; 4]>());
+    let mut rng = rand::XorShiftRng::new_unseeded();
 
     let mut best_state = RansacState::<Model, Point> {
         // samples: Vec::new(),

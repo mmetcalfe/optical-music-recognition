@@ -8,6 +8,9 @@ libc = "0.2"
 glium = "*"
 nalgebra = "0.5.1"
 rand = "0.3.14"
+time = "0.1"
+
+glium_text = "0.8.0"
 
 GSL = "0.4"
 
@@ -21,3 +24,7 @@ GSL = "0.4"
 # ffmpeg-sys = "2.8.6-1" # Problems due to bad config detection.
 [dependencies.ffmpeg-sys]
 git = "file:/Users/mitchell/code/rust-ffmpeg-sys"
+
+
+[profile.release]
+debug = true
