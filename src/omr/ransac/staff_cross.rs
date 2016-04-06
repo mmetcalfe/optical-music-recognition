@@ -82,9 +82,9 @@ impl StaffCrossLineModel {
 
 impl RansacModel<StaffCrossLine, StaffCross> for StaffCrossLineModel {
 
-    fn fit_inliers(data: &Vec<StaffCross>) -> StaffCrossLine {
-        let pt1 = &data[0];
-        let pt2 = &data[1];
+    fn fit_inliers(data: &[&StaffCross]) -> StaffCrossLine {
+        let pt1 = data[0];
+        let pt2 = data[1];
         // StaffCrossLine::new(pt1.centre(), pt2.centre())
         StaffCrossLine::new(pt1.clone(), pt2.clone())
     }

@@ -3,7 +3,7 @@ pub mod staff_cross;
 use rand;
 use rand::SeedableRng;
 use rand::Rng;
-
+use rand::distributions::{IndependentSample, Range};
 use std;
 
 pub fn choose(n: usize, k: usize) -> usize {
@@ -70,7 +70,7 @@ pub fn calculate_num_iterations(
 
 pub trait RansacModel<Model, Point> {
     // Find the best model that best fits a minimal set of points
-    fn fit_inliers(&Vec<Point>) -> Model;
+    fn fit_inliers(&[&Point]) -> Model;
 
     // Number of points required for fitInliers
     // Note: this is a method due to the following:
@@ -105,14 +105,11 @@ pub struct RansacState<Model, Point> {
     pub inliers : Vec<Point>,
 }
 
-pub fn ransac<RM, Model, Point>(params: &RansacParams, data: &Vec<Point>)
+pub fn ransac<RM, Model, Point, R: Rng>(params: &RansacParams, data: &Vec<Point>, rng: &mut R)
     -> RansacState<Model, Point>
     // -> Option<Model>
     where RM: RansacModel<Model, Point>
         , Point: Clone {
-    // let mut thread_rng = rand::thread_rng();
-    // let mut rng = rand::XorShiftRng::from_seed(thread_rng.gen::<[u32; 4]>());
-    let mut rng = rand::XorShiftRng::new_unseeded();
 
     let mut best_state = RansacState::<Model, Point> {
         // samples: Vec::new(),
@@ -126,10 +123,17 @@ pub fn ransac<RM, Model, Point>(params: &RansacParams, data: &Vec<Point>)
         return best_state;
     }
 
+    let between = rand::distributions::Range::new(0, data.len());
     for _ in 0..params.num_iterations {
         // Randomly select points:
-        // println!("Randomly select points:");
-        let samples = rand::sample(&mut rng, data.iter().cloned(), RM::num_required());
+        // Note: Using rand::sample is *much* slower than just sampling two random indices.
+        // let samples = rand::sample(rng, data, RM::num_required());
+        let a = between.ind_sample(rng);
+        let b = between.ind_sample(rng);
+        let samples = [&data[a], &data[b]];
+        if a == b {
+            continue;
+        }
 
         // Fit the model:
         // println!("Fit the model:");
@@ -163,6 +167,10 @@ pub fn ransac_multiple<RM, Model, Point>(params: &RansacParams, data: &Vec<Point
     where RM: RansacModel<Model, Point>
         , Point: Clone {
 
+    // let mut thread_rng = rand::thread_rng();
+    // let mut rng = rand::XorShiftRng::from_seed(thread_rng.gen::<[u32; 4]>());
+    let mut rng = rand::XorShiftRng::new_unseeded();
+
     let mut states = Vec::new();
     let mut new_data = data.clone();
 
@@ -177,7 +185,7 @@ pub fn ransac_multiple<RM, Model, Point>(params: &RansacParams, data: &Vec<Point
         new_params.num_iterations = num_iterations;
         // println!("num_iterations: {:?}", num_iterations);
 
-        let state = ransac::<RM, Model, Point>(&new_params, &new_data);
+        let state = ransac::<RM, Model, Point, _>(&new_params, &new_data, &mut rng);
         // let state = ransac::<RM, Model, Point>(params, &new_data);
 
         if state.model.is_some() {
