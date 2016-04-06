@@ -6,6 +6,7 @@ use rand::Rng;
 use rand::distributions::{IndependentSample, Range};
 use std;
 
+#[inline(never)]
 pub fn choose(n: usize, k: usize) -> usize {
     // https://en.wikipedia.org/wiki/Binomial_coefficient#Multiplicative_formula
 
@@ -21,6 +22,7 @@ pub fn choose(n: usize, k: usize) -> usize {
     product.round() as usize
 }
 
+#[inline(never)]
 pub fn calculate_num_iterations(
     // Total number of points in the dataset:
     num_points: usize,
@@ -105,6 +107,7 @@ pub struct RansacState<Model, Point> {
     pub inliers : Vec<Point>,
 }
 
+#[inline(never)]
 pub fn ransac<RM, Model, Point, R: Rng>(params: &RansacParams, data: &Vec<Point>, rng: &mut R)
     -> RansacState<Model, Point>
     // -> Option<Model>
@@ -161,6 +164,7 @@ pub fn ransac<RM, Model, Point, R: Rng>(params: &RansacParams, data: &Vec<Point>
     best_state
 }
 
+#[inline(never)]
 pub fn ransac_multiple<RM, Model, Point>(params: &RansacParams, data: &Vec<Point>)
     -> Vec<RansacState<Model, Point>>
     // -> Option<Model>

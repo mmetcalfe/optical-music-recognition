@@ -11,6 +11,7 @@ pub struct StaffCrossLine {
     pub b: StaffCross,
 }
 impl StaffCrossLine {
+    #[inline(never)]
     pub fn new(a: StaffCross, b: StaffCross) -> StaffCrossLine {
         StaffCrossLine {
             a: a,
@@ -18,6 +19,7 @@ impl StaffCrossLine {
         }
     }
 
+    #[inline(never)]
     pub fn average_space_width(&self) -> f32 {
         let line = gm::Line::new(self.a.centre(), self.b.centre());
 
@@ -27,6 +29,7 @@ impl StaffCrossLine {
         (avg_a + avg_b) / 2.0
     }
 
+    #[inline(never)]
     pub fn average_line_width(&self) -> f32 {
         let line = gm::Line::new(self.a.centre(), self.b.centre());
 
@@ -39,6 +42,7 @@ impl StaffCrossLine {
 
 pub struct StaffCrossLineModel;
 impl StaffCrossLineModel {
+    #[inline(never)]
     pub fn is_inlier(
         space_width: f32,
         line_width: f32,
@@ -82,6 +86,7 @@ impl StaffCrossLineModel {
 
 impl RansacModel<StaffCrossLine, StaffCross> for StaffCrossLineModel {
 
+    #[inline(never)]
     fn fit_inliers(data: &[&StaffCross]) -> StaffCrossLine {
         let pt1 = data[0];
         let pt2 = data[1];
@@ -89,10 +94,12 @@ impl RansacModel<StaffCrossLine, StaffCross> for StaffCrossLineModel {
         StaffCrossLine::new(pt1.clone(), pt2.clone())
     }
 
+    #[inline(never)]
     fn num_required() -> usize {
         2
     }
 
+    #[inline(never)]
     fn find_inliers(max_dist: f32, data: &Vec<StaffCross>, model: &StaffCrossLine) -> Vec<StaffCross> {
         let space_width = model.average_space_width();
         let line_width = model.average_line_width();
@@ -118,6 +125,7 @@ impl RansacModel<StaffCrossLine, StaffCross> for StaffCrossLineModel {
         inliers
     }
 
+    #[inline(never)]
     fn find_outliers(max_dist: f32, data: &Vec<StaffCross>, model: &StaffCrossLine) -> Vec<StaffCross> {
         let space_width = model.average_space_width();
         let line_width = model.average_line_width();
@@ -143,6 +151,7 @@ impl RansacModel<StaffCrossLine, StaffCross> for StaffCrossLineModel {
         inliers
     }
 
+    #[inline(never)]
     fn fit_model(data: &Vec<StaffCross>) -> Option<StaffCrossLine> {
         None
     }

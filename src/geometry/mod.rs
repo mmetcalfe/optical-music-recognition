@@ -9,6 +9,7 @@ pub struct Line {
 
 impl Line {
 
+    #[inline(never)]
     pub fn new(a: na::Vec2<f32>, b: na::Vec2<f32>) -> Line {
         Line {
             a: a,
@@ -16,10 +17,12 @@ impl Line {
         }
     }
 
+    #[inline(never)]
     pub fn distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
         self.signed_distance_to_point(point).abs()
     }
 
+    #[inline(never)]
     pub fn signed_distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
         let dir = self.a - self.b;
         let norm = na::Vec2::new(dir[1], -dir[0]);
