@@ -133,7 +133,6 @@ fn main() {
             min_inliers: 15,
         };
         // let maybe_line = omr::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
-
         // let state = omr::ransac::ransac::<StaffCrossLineModel,_,_>(&params, &cross_points);
         // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 

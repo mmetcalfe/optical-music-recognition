@@ -127,6 +127,7 @@ impl<'a> DrawingContext<'a> {
 
         let line_space = lw + sw;
 
+        // let mut lines = Vec::<gm::Line>::new();
         for i in -2..3 {
             let d = line_space * (i as f32);
 
@@ -134,7 +135,10 @@ impl<'a> DrawingContext<'a> {
             let e2 = p2 + norm * d;
 
             self.draw_line(target, e1, e2, lw, colour);
+            // lines.push(gm::Line::new(e1, e2));
         }
+
+        // self.draw_lines(target, &lines, lw, colour);
     }
 
     pub fn draw_staff_cross(&self, mut target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, cross: &StaffCross, colour: [f32; 4]) {

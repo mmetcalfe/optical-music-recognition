@@ -4,6 +4,8 @@ use rand;
 use rand::SeedableRng;
 use rand::Rng;
 
+use std;
+
 pub fn choose(n: usize, k: usize) -> usize {
     // https://en.wikipedia.org/wiki/Binomial_coefficient#Multiplicative_formula
 
@@ -11,12 +13,12 @@ pub fn choose(n: usize, k: usize) -> usize {
         return 1;
     }
 
-    let mut sum = 0.0;
+    let mut product = 1.0;
     for i in 1..k+1 {
-        sum += (n + 1 - i) as f64 / i as f64
+        product *= (n + 1 - i) as f64 / i as f64
     }
 
-    sum.round() as usize
+    product.round() as usize
 }
 
 pub fn calculate_num_iterations(
@@ -35,6 +37,16 @@ pub fn calculate_num_iterations(
     // The required proability of finding the model:
     success_probability: f32
     ) -> usize {
+
+    if num_inliers > num_points {
+        panic!("Cannot have more inliers than data points!")
+    }
+
+    if num_inliers < points_per_model {
+        return 0;
+        // panic!("Cannot have fewer inliers than points required!")
+    }
+
     let n = num_points;
     let k = num_inliers;
     let m = points_per_model;
@@ -154,11 +166,10 @@ pub fn ransac_multiple<RM, Model, Point>(params: &RansacParams, data: &Vec<Point
     let mut states = Vec::new();
     let mut new_data = data.clone();
 
-    // println!("START");
     loop {
         let num_iterations = calculate_num_iterations(
             new_data.len(), // num_points
-            data.len() / 20, // num_inliers
+            std::cmp::min(new_data.len() / 2, data.len() / 20), // num_inliers
             RM::num_required(), // points_per_model
             0.75 // success_probability
         );
