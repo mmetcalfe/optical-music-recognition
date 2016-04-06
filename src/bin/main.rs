@@ -148,6 +148,22 @@ fn main() {
             let p1 = ycbcr_frame.opengl_coords_for_point(best_line.a);
             let p2 = ycbcr_frame.opengl_coords_for_point(best_line.b);
             draw_ctx.draw_line_extended(&mut target, p1, p2, 5.0, [1.0, 0.5, 0.5, 1.0]);
+
+
+            let mut is_staff = false;
+            if let Some(ref detected_line) = state.model {
+                // is_staff = omr::refinement::refine_detected_staff(&detected_line, &state.inliers);
+
+                // detected_line
+                // best_line
+                let inliers = &state.inliers;
+
+                let (t_min, t_max) = best_line.screen_entry_exit_times(ycbcr_frame.width as f32, ycbcr_frame.height as f32);
+                let p_min = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_min));
+                let p_max = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_max));
+                draw_ctx.draw_line(&mut target, p_min, p_min*0.9+p_max*0.1, 10.0, [1.0, 1.0, 0.5, 1.0]);
+                draw_ctx.draw_line(&mut target, p_max, p_min*0.1+p_max*0.9, 10.0, [1.0, 1.0, 0.5, 1.0]);
+            }
         }
 
         let frame_duration = SteadyTime::now() - frame_start_time;
