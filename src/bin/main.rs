@@ -12,7 +12,7 @@ use optical_music_recognition::ffmpeg_camera::image::Image;
 use optical_music_recognition::drawing;
 use optical_music_recognition::omr;
 use optical_music_recognition::math;
-// use optical_music_recognition::geometry;
+use optical_music_recognition::geometry;
 use optical_music_recognition::omr::ransac::staff_cross::StaffCrossLineModel;
 use optical_music_recognition::omr::scanning::staff_cross::StaffCross;
 // use std::io::Cursor;
@@ -32,8 +32,8 @@ fn main() {
     //     ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (1280, 720))
     //         .expect("Failed to open camera.");
 
-    // let (img_w, img_h) = (320, 240);
-    let (img_w, img_h) = (1280, 720);
+    let (img_w, img_h) = (320, 240);
+    // let (img_w, img_h) = (1280, 720);
     // let (img_w, img_h) = (1920, 1080);
 
     let mut camera =
@@ -147,8 +147,7 @@ fn main() {
             let best_line = math::fit_line(&centres);
             let p1 = ycbcr_frame.opengl_coords_for_point(best_line.a);
             let p2 = ycbcr_frame.opengl_coords_for_point(best_line.b);
-            draw_ctx.draw_line_extended(&mut target, p1, p2, 5.0, [1.0, 0.5, 0.5, 1.0]);
-
+            draw_ctx.draw_line_extended(&mut target, p1, p2, 3.0, [0.3, 0.3, 0.1, 1.0]);
 
             let mut is_staff = false;
             if let Some(ref detected_line) = state.model {
@@ -171,32 +170,35 @@ fn main() {
 
                 let line_sep = avg_space_width + avg_line_width;
 
+                let staff = geometry::staff::Staff::new(
+                    best_line.a,
+                    best_line.b,
+                    avg_line_width,
+                    avg_space_width
+                );
+
                 // let num = 100;
                 // for i in 0..num {
                 let mut t = t_min;
                 while t < t_max {
                     t += 2.0;
-                    // let t = t_min + (t_max - t_min) * (i as f32 / num as f32);
-                    let p_t = best_line.point_at_time(t);
 
                     // Sample lines:
                     let mut line_avg = 0.0;
-                    for i in -2..3 {
-                        let d = line_sep * (i as f32);
-                        let pt = p_t + normal * d;
+                    for pt in staff.perpendicular_samples(t, 5, line_sep) {
                         let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
                         line_avg += brightness.round();
 
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
-                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, [0.0, 0.4, 0.1, 1.0]);
+
+                        let colour = if brightness > 0.5 {[0.0, 0.5, 0.0, 1.0]} else {[0.0, 0.0, 0.5, 1.0]};
+                        draw_ctx.draw_point(&mut target, draw_pt, 1.0, colour);
                     }
                     line_avg /= 5.0;
 
                     // Sample spaces:
                     let mut space_avg = 0.0;
-                    for i in -2..2 {
-                        let d = line_sep * (i as f32 + 0.5);
-                        let pt = p_t + normal * d;
+                    for pt in staff.perpendicular_samples(t, 4, line_sep) {
                         let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
                         space_avg += brightness.round();
 
@@ -205,39 +207,49 @@ fn main() {
                     }
                     space_avg /= 4.0;
 
-
                     // Blank spaces:
                     let num_samples = 20;
                     let sample_sep = 1.2 * line_sep * 2.0 / (num_samples as f32 * 0.5);
-                    let min_i = -num_samples/2;
-                    let max_i = if num_samples % 2 == 0 {num_samples/2} else {num_samples/2 + 1};
-                    let i_mod = if num_samples % 2 == 0 {0.5} else {0.0};
                     let mut blank_avg = 0.0;
-                    for i in min_i..max_i {
-                        let d = sample_sep * (i as f32 + i_mod);
-                        let pt = p_t + normal * d;
+                    for pt in staff.perpendicular_samples(t, num_samples, sample_sep) {
                         let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
                         blank_avg += brightness.round();
-
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
                         // draw_ctx.draw_point(&mut target, draw_pt, 1.0, [0.2, 0.2, 0.2, 1.0]);
                     }
                     blank_avg /= num_samples as f32;
 
-
-                    let is_staff = line_avg < 0.5 && space_avg > 0.5;
+                    let has_lines = line_avg < 0.5;
+                    let has_spaces = space_avg > 0.5;
+                    let has_all_lines = line_avg < 0.1;
+                    let has_all_spaces = space_avg > 0.9;
                     // let is_gap = (space_avg*4.0 + line_avg*5.0) / 9.0 > 0.95;
                     let is_gap = blank_avg > 0.95;
 
-                    if is_staff && !is_gap {
+                    let p_t = best_line.point_at_time(t);
+                    // if has_lines && has_spaces && !is_gap {
+                    if !has_lines && !has_spaces && !is_gap {
                         let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
                         let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
                         draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 1.0, 0.5, 1.0]);
-                    } else if is_gap {
+                    }
+                    // else
+                    // if (has_all_lines || has_all_spaces) && !is_gap {
+                    //     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
+                    //     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
+                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.5, 0.5, 1.0]);
+                    // }
+                    // else
+                    if is_gap {
                         let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
                         let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
                         draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.5, 1.0]);
                     }
+                    // else {
+                    //     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
+                    //     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
+                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
+                    // }
                 }
             }
         }
