@@ -159,17 +159,93 @@ fn main() {
                 let inliers = &state.inliers;
 
                 let (t_min, t_max) = best_line.screen_entry_exit_times(ycbcr_frame.width as f32, ycbcr_frame.height as f32);
-                let p_min = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_min));
-                let p_max = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_max));
-                draw_ctx.draw_line(&mut target, p_min, p_min*0.9+p_max*0.1, 10.0, [1.0, 1.0, 0.5, 1.0]);
-                draw_ctx.draw_line(&mut target, p_max, p_min*0.1+p_max*0.9, 10.0, [1.0, 1.0, 0.5, 1.0]);
+                // let p_min = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_min));
+                // let p_max = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_max));
+                // draw_ctx.draw_line(&mut target, p_min, p_min*0.9+p_max*0.1, 10.0, [1.0, 1.0, 0.5, 1.0]);
+                // draw_ctx.draw_line(&mut target, p_max, p_min*0.1+p_max*0.9, 10.0, [1.0, 1.0, 0.5, 1.0]);
+
+                let normal = best_line.normal();
+
+                let avg_space_width = inliers.iter().fold(0.0, |sum, pt| sum + pt.average_space_width(&best_line)) / inliers.len() as f32;
+                let avg_line_width = inliers.iter().fold(0.0, |sum, pt| sum + pt.average_line_width(&best_line)) / inliers.len() as f32;
+
+                let line_sep = avg_space_width + avg_line_width;
+
+                // let num = 100;
+                // for i in 0..num {
+                let mut t = t_min;
+                while t < t_max {
+                    t += 2.0;
+                    // let t = t_min + (t_max - t_min) * (i as f32 / num as f32);
+                    let p_t = best_line.point_at_time(t);
+
+                    // Sample lines:
+                    let mut line_avg = 0.0;
+                    for i in -2..3 {
+                        let d = line_sep * (i as f32);
+                        let pt = p_t + normal * d;
+                        let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
+                        line_avg += brightness.round();
+
+                        let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
+                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, [0.0, 0.4, 0.1, 1.0]);
+                    }
+                    line_avg /= 5.0;
+
+                    // Sample spaces:
+                    let mut space_avg = 0.0;
+                    for i in -2..2 {
+                        let d = line_sep * (i as f32 + 0.5);
+                        let pt = p_t + normal * d;
+                        let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
+                        space_avg += brightness.round();
+
+                        let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
+                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, [0.8, 0.0, 1.0, 1.0]);
+                    }
+                    space_avg /= 4.0;
+
+
+                    // Blank spaces:
+                    let num_samples = 20;
+                    let sample_sep = 1.2 * line_sep * 2.0 / (num_samples as f32 * 0.5);
+                    let min_i = -num_samples/2;
+                    let max_i = if num_samples % 2 == 0 {num_samples/2} else {num_samples/2 + 1};
+                    let i_mod = if num_samples % 2 == 0 {0.5} else {0.0};
+                    let mut blank_avg = 0.0;
+                    for i in min_i..max_i {
+                        let d = sample_sep * (i as f32 + i_mod);
+                        let pt = p_t + normal * d;
+                        let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
+                        blank_avg += brightness.round();
+
+                        let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
+                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, [0.2, 0.2, 0.2, 1.0]);
+                    }
+                    blank_avg /= num_samples as f32;
+
+
+                    let is_staff = line_avg < 0.5 && space_avg > 0.5;
+                    // let is_gap = (space_avg*4.0 + line_avg*5.0) / 9.0 > 0.95;
+                    let is_gap = blank_avg > 0.95;
+
+                    if is_staff && !is_gap {
+                        let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
+                        let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 1.0, 0.5, 1.0]);
+                    } else if is_gap {
+                        let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
+                        let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.5, 1.0]);
+                    }
+                }
             }
         }
 
         let frame_duration = SteadyTime::now() - frame_start_time;
         frame_start_time = SteadyTime::now();
         let mspf = frame_duration.num_milliseconds();
-        let fps = (1000.0 / (mspf as f32));
+        let fps = 1000.0 / (mspf as f32);
         let time_str = format!("{} ms/frame, {} fps", mspf, fps);
         draw_ctx.draw_string(
             &mut target,

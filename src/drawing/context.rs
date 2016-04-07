@@ -100,6 +100,15 @@ impl<'a> DrawingContext<'a> {
         rect
     }
 
+    pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
+        let rect = RotatedRectangle {
+            position: [pt[0], pt[1]],
+            size: [lw, lw],
+            angle: 0.0,
+        };
+        self.rectangle_buffer.draw_rectangle(target, &rect, colour)
+    }
+
     pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
         let rect = Self::line_to_rectangle(&gm::Line::new(p1, p2), lw);
         self.rectangle_buffer.draw_rectangle(target, &rect, colour)
@@ -227,7 +236,7 @@ impl<'a> DrawingContext<'a> {
             let p1 = ycbcr_frame.opengl_coords_for_point(line.a);
             let p2 = ycbcr_frame.opengl_coords_for_point(line.b);
 
-            let staff_col = [0.0, 0.0, 1.0, 1.0];
+            let staff_col = [0.4, 0.6, 0.4, 1.0];
             self.draw_staff(&mut target, p1, p2,
                 avg_space_width,
                 avg_line_width,

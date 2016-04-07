@@ -5,6 +5,7 @@ use nalgebra as na;
 
 use std::io::prelude::*;
 use std::fs::OpenOptions;
+use std::cmp;
 
 
 #[derive(Copy, Clone)]
@@ -22,6 +23,21 @@ pub trait Image : Clone {
     fn data(&self) -> &Vec<u8>; // raw data buffer
 
     fn index(&self, col : usize, row : usize) -> Pixel;
+    // fn sample_point(&self, pt: na::Vec2<f32>) -> Pixel {
+    //     let col = pt[0].floor() as usize;
+    //     let row = pt[1].floor() as usize;
+    //     self.index(col, row)
+    // }
+    fn sample_point(&self, pt: na::Vec2<f32>) -> Pixel {
+        let raw_col = pt[0].floor() as usize;
+        let raw_row = pt[1].floor() as usize;
+
+        let col = cmp::max(0, cmp::min(self.width() - 1, raw_col));
+        let row = cmp::max(0, cmp::min(self.height() - 1, raw_row));
+
+        self.index(col, row)
+    }
+
     fn save_jpeg(&self, save_fname : &str) -> Result<(), FfmpegError>;
 
     fn contains(&self, col : usize, row : usize) -> bool {

@@ -19,6 +19,12 @@ impl Line {
         }
     }
 
+    pub fn normal(&self) -> na::Vec2<f32> {
+        let dir = self.a - self.b;
+        let norm = na::Vec2::new(dir[1], -dir[0]);
+        na::normalize(&norm)
+    }
+
     #[inline(never)]
     pub fn distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
         self.signed_distance_to_point(point).abs()
