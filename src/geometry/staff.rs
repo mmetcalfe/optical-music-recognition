@@ -2,6 +2,7 @@ use std::f32;
 use std::cmp;
 use nalgebra as na;
 use nalgebra::Norm;
+use geometry as gm;
 
 #[derive(Debug)]
 pub struct Staff {
@@ -27,6 +28,10 @@ impl Staff {
             line_width: line_width,
             space_width: space_width,
         }
+    }
+
+    pub fn line_sep(&self) -> f32 {
+        self.line_width + self.space_width
     }
 
     pub fn normal(&self) -> na::Vec2<f32> {
@@ -79,5 +84,12 @@ impl Staff {
         }
 
         samples
+    }
+
+    #[inline(never)]
+    pub fn screen_entry_exit_times(&self, width: f32, height: f32) -> (f32, f32) {
+        let line = gm::Line::new(self.pos, self.pos + self.dir);
+
+        line.screen_entry_exit_times(width, height)
     }
 }

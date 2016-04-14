@@ -28,17 +28,21 @@ fn main() {
     // let mut camera =
     //     ffmpeg_camera::FfmpegCamera::get_default()
     //         .expect("Failed to open camera.");
-    // let mut camera =
-    //     ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (1280, 720))
-    //         .expect("Failed to open camera.");
+
 
     let (img_w, img_h) = (320, 240);
     // let (img_w, img_h) = (1280, 720);
     // let (img_w, img_h) = (1920, 1080);
 
     let mut camera =
-        ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (img_w, img_h))
-            .expect("Failed to open camera.");
+        ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (img_w, img_h));
+
+    if camera.is_err() {
+        println!("Failed to open camera. Opening default camera...");
+        camera = ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (img_w, img_h));
+    }
+
+    let mut camera = camera.expect("Failed to open camera.");
 
     let display = glium::glutin::WindowBuilder::new()
         // .with_dimensions(1280, 720)
@@ -219,36 +223,23 @@ fn main() {
                     }
                     blank_avg /= num_samples as f32;
 
-                    let has_lines = line_avg < 0.5;
-                    let has_spaces = space_avg > 0.5;
-                    let has_all_lines = line_avg < 0.1;
-                    let has_all_spaces = space_avg > 0.9;
-                    // let is_gap = (space_avg*4.0 + line_avg*5.0) / 9.0 > 0.95;
-                    let is_gap = blank_avg > 0.95;
+                    let class = omr::refinement::classify_staff_sample(line_avg, space_avg, blank_avg);
 
                     let p_t = best_line.point_at_time(t);
-                    // if has_lines && has_spaces && !is_gap {
-                    if !has_lines && !has_spaces && !is_gap {
-                        let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
-                        let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 1.0, 0.5, 1.0]);
+                    let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
+                    let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
+
+                    if class == omr::refinement::StaffEvidenceClass::None {
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.5, 1.0, 1.0]);
                     }
-                    // else
-                    // if (has_all_lines || has_all_spaces) && !is_gap {
-                    //     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
-                    //     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
-                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.5, 0.5, 1.0]);
-                    // }
-                    // else
-                    if is_gap {
-                        let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
-                        let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.5, 1.0]);
+                    if class == omr::refinement::StaffEvidenceClass::Negative {
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 1.0, 1.0]);
                     }
-                    // else {
-                    //     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
-                    //     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
-                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
+                    if class == omr::refinement::StaffEvidenceClass::Blank {
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
+                    }
+                    // if class == omr::refinement::StaffEvidenceClass::Blank {
+                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.5, 1.0]);
                     // }
                 }
             }
