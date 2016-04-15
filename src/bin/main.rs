@@ -31,9 +31,9 @@ fn main() {
 
 
     // let (img_w, img_h) = (320, 240);
-    let (img_w, img_h) = (640, 480);
+    // let (img_w, img_h) = (640, 480);
     // let (img_w, img_h) = (1280, 720);
-    // let (img_w, img_h) = (1920, 1080);
+    let (img_w, img_h) = (1920, 1080);
 
     let mut camera =
         ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (img_w, img_h));
@@ -150,7 +150,7 @@ fn main() {
 
         let states = omr::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
         for state in &states {
-            draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
+            // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
             let centres : Vec<na::Vec2<f32>> = state.inliers.iter()
                 // .take(5)
@@ -159,7 +159,7 @@ fn main() {
             let best_line = math::fit_line(&centres);
             let p1 = ycbcr_frame.opengl_coords_for_point(best_line.a);
             let p2 = ycbcr_frame.opengl_coords_for_point(best_line.b);
-            draw_ctx.draw_line_extended(&mut target, p1, p2, 3.0, [0.3, 0.3, 0.1, 1.0]);
+            // draw_ctx.draw_line_extended(&mut target, p1, p2, 3.0, [0.3, 0.3, 0.1, 1.0]);
 
             let mut is_staff = false;
             if let Some(ref detected_line) = state.model {
@@ -192,8 +192,9 @@ fn main() {
                 // let num = 100;
                 // for i in 0..num {
                 let mut t = t_min;
-                while t < t_max {
-                    t += 2.0;
+                let step_size = staff.line_sep() * 0.5;
+                while t + step_size < t_max {
+                    t += step_size;
 
                     // Sample lines:
                     let mut line_avg = 0.0;
@@ -204,7 +205,7 @@ fn main() {
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
 
                         let colour = if brightness > 0.5 {[0.0, 0.5, 0.0, 1.0]} else {[0.0, 0.0, 0.5, 1.0]};
-                        draw_ctx.draw_point(&mut target, draw_pt, 1.0, colour);
+                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, colour);
                     }
                     line_avg /= 5.0;
 
@@ -238,19 +239,19 @@ fn main() {
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
 
                     if class == omr::refinement::StaffEvidenceClass::Blank {
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
+                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
                     }
                     if class == omr::refinement::StaffEvidenceClass::Strong {
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.3, 0.0, 1.0]);
+                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.3, 0.0, 1.0]);
                     }
                     if class == omr::refinement::StaffEvidenceClass::Partial {
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.8, 0.0, 1.0]);
+                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.8, 0.0, 1.0]);
                     }
                     if class == omr::refinement::StaffEvidenceClass::Weak {
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.3, 0.6, 0.0, 1.0]);
+                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.3, 0.6, 0.0, 1.0]);
                     }
                     if class == omr::refinement::StaffEvidenceClass::Negative {
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 1.0, 1.0]);
+                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 1.0, 1.0]);
                     }
                     // if class == omr::refinement::StaffEvidenceClass::None {
                     //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.5, 1.0, 1.0]);
@@ -263,14 +264,14 @@ fn main() {
                     let staff_pt2 = part.point_at_time(part.length);
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
-                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 8.0, [1.0, 1.0, 1.0, 1.0]);
+                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 1.0, 1.0, 1.0]);
                 }
                 for part in blank_segments {
                     let staff_pt1 = part.point_at_time(0.0);
                     let staff_pt2 = part.point_at_time(part.length);
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
-                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 4.0, [0.0, 0.0, 0.0, 1.0]);
+                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
                 }
 
                 let staff_segments = candidate_segments.iter()

@@ -76,7 +76,7 @@ pub fn partition_staff<I: Image>(image: &I, staff: &Staff) -> (Vec<Staff>, Vec<S
     let mut sample_classes = Vec::new();
 
     // Classify samples:
-    let step_size = 2.0;
+    let step_size = staff.line_sep() * 0.5;
     let (t_min, t_max) = staff.screen_entry_exit_times(image.width() as f32, image.height() as f32);
     let mut span_start = t_min;
     let mut t = t_min;
@@ -186,5 +186,46 @@ pub fn partition_staff<I: Image>(image: &I, staff: &Staff) -> (Vec<Staff>, Vec<S
 }
 
 pub fn staff_segment_is_valid<I: Image>(image: &I, staff: &Staff) -> bool {
+
+    // Calculate averages along each staff line and space.
+    // Consider the segment invalid if any single line or space is not present often enough.
+
+    let mut line_sums = [0.0; 5];
+    let mut space_sums = [0.0; 4];
+
+    let step_size = staff.line_sep() * 0.5;
+    let mut t = 0.0;
+    let mut num_samples = 0;
+    while t + step_size < staff.length {
+        t += step_size;
+        num_samples += 1;
+
+        for (i, pt) in staff.perpendicular_samples(t, 5, staff.line_sep()).iter().enumerate() {
+            let brightness = image.sample_point(*pt).y as f32 / 255.0;
+            line_sums[i] += brightness.round();
+        }
+
+        for (i, pt) in staff.perpendicular_samples(t, 4, staff.line_sep()).iter().enumerate() {
+            let brightness = image.sample_point(*pt).y as f32 / 255.0;
+            space_sums[i] += brightness.round();
+        }
+    }
+
+    // Ensure each line is dark enough:
+    for sum in line_sums.iter().cloned() {
+        let avg = sum as f32 / num_samples as f32;
+        if avg > 0.25 {
+            return false;
+        }
+    }
+
+    // Ensure each space is bright enough:
+    for sum in space_sums.iter().cloned() {
+        let avg = sum as f32 / num_samples as f32;
+        if avg < 0.33 {
+            return false;
+        }
+    }
+
     true
 }
