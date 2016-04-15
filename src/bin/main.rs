@@ -30,16 +30,24 @@ fn main() {
     //         .expect("Failed to open camera.");
 
 
-    let (img_w, img_h) = (320, 240);
+    // let (img_w, img_h) = (320, 240);
+    let (img_w, img_h) = (640, 480);
     // let (img_w, img_h) = (1280, 720);
     // let (img_w, img_h) = (1920, 1080);
 
     let mut camera =
         ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (img_w, img_h));
 
+
     if camera.is_err() {
-        println!("Failed to open camera. Opening default camera...");
-        camera = ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (img_w, img_h));
+        println!("Failed to open HD Pro Webcam C920. Opening USB Camera...");
+        camera =
+            ffmpeg_camera::FfmpegCamera::get_camera("USB Camera", "30.000030", (img_w, img_h));
+
+        if camera.is_err() {
+            println!("Failed to open camera. Opening default camera...");
+            camera = ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (img_w, img_h));
+        }
     }
 
     let mut camera = camera.expect("Failed to open camera.");
@@ -229,18 +237,40 @@ fn main() {
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
 
-                    if class == omr::refinement::StaffEvidenceClass::None {
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.5, 1.0, 1.0]);
+                    if class == omr::refinement::StaffEvidenceClass::Blank {
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
+                    }
+                    if class == omr::refinement::StaffEvidenceClass::Strong {
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.3, 0.0, 1.0]);
+                    }
+                    if class == omr::refinement::StaffEvidenceClass::Partial {
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.8, 0.0, 1.0]);
+                    }
+                    if class == omr::refinement::StaffEvidenceClass::Weak {
+                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.3, 0.6, 0.0, 1.0]);
                     }
                     if class == omr::refinement::StaffEvidenceClass::Negative {
                         draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 1.0, 1.0]);
                     }
-                    if class == omr::refinement::StaffEvidenceClass::Blank {
-                        draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
-                    }
-                    // if class == omr::refinement::StaffEvidenceClass::Blank {
-                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.5, 1.0]);
+                    // if class == omr::refinement::StaffEvidenceClass::None {
+                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.5, 1.0, 1.0]);
                     // }
+                }
+
+                let (staff_segments, blank_segments) = omr::refinement::partition_staff(&ycbcr_frame, &staff);
+                for part in staff_segments {
+                    let staff_pt1 = part.point_at_time(0.0);
+                    let staff_pt2 = part.point_at_time(part.length);
+                    let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
+                    let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
+                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 8.0, [1.0, 1.0, 1.0, 1.0]);
+                }
+                for part in blank_segments {
+                    let staff_pt1 = part.point_at_time(0.0);
+                    let staff_pt2 = part.point_at_time(part.length);
+                    let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
+                    let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
+                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 4.0, [0.0, 0.0, 0.0, 1.0]);
                 }
             }
         }
