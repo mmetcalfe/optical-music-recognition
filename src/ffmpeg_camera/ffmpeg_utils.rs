@@ -149,7 +149,7 @@ pub unsafe fn convert_frame(
     -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
     let src_w = (*src_frame).width as usize;
     let src_h = (*src_frame).height as usize;
-    let mut dst_frame = try!(make_empty_avframe(src_w, src_h, pixel_format));
+    let dst_frame = try!(make_empty_avframe(src_w, src_h, pixel_format));
     copy_and_convert_frame(src_frame, dst_frame);
 
     Ok(dst_frame)

@@ -41,8 +41,8 @@ impl<'a> DrawingContext<'a> {
         let ys = 2.0 / height as f32;
         // let aspect = (width as f32) / (height as f32);
 
-        let hw = width as f32 / 2.0;
-        let hh = height as f32 / 2.0;
+        // let hw = width as f32 / 2.0;
+        // let hh = height as f32 / 2.0;
 
         // xo, yo = (0, 0)
         // w, h = framebufferSize

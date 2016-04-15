@@ -221,7 +221,7 @@ impl FfmpegCamera {
 
     pub fn get_image<I : image::Image>(&mut self, target_format : ffmpeg_sys::AVPixelFormat)
         -> Result<I, FfmpegError> {
-        let mut data : Vec<u8>;
+        let data : Vec<u8>;
         let width;
         let height;
 
@@ -232,7 +232,7 @@ impl FfmpegCamera {
             let mut src_frame = self.frame_raw;
             let mut converted_frame = ptr::null_mut::<ffmpeg_sys::AVFrame>();
 
-            let mut frame_format = ffmpeg_utils::av_pix_fmt_from_i32((*self.frame_raw).format);
+            let frame_format = ffmpeg_utils::av_pix_fmt_from_i32((*self.frame_raw).format);
             if frame_format != target_format {
                 // Create a frame for format conversion:
                 converted_frame = try!(ffmpeg_utils::convert_frame(self.frame_raw, target_format));

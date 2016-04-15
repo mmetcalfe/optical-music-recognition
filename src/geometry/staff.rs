@@ -1,5 +1,4 @@
-use std::f32;
-use std::cmp;
+// use std::f32;
 use nalgebra as na;
 use nalgebra::Norm;
 use geometry as gm;
@@ -70,7 +69,7 @@ impl Staff {
         let min_i = -(num_samples as isize/2);
         let max_i = if num_samples % 2 == 0 {num_samples/2} else {num_samples/2 + 1} as isize;
         let i_mod = if num_samples % 2 == 0 {0.5} else {0.0};
-        let mut blank_avg = 0.0;
+        // let mut blank_avg = 0.0;
         for i in min_i..max_i {
             let d = sample_sep * (i as f32 + i_mod);
             let pt = p_t + normal * d;

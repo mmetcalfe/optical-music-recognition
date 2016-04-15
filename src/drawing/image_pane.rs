@@ -8,7 +8,7 @@ use ffmpeg_camera::ffmpeg_utils;
 use super::glsl_functions;
 
 extern crate core;
-use self::core::ops::Deref;
+// use self::core::ops::Deref;
 
 pub fn texture_to_image(texture : &glium::texture::Texture2d) -> image_ycbcr::Image {
     // // Slow options (i.e. ~500ms):
@@ -238,7 +238,6 @@ impl<'a> ImagePane<'a> {
 
         // self.draw_texture_flipped(target, &self.identity_program, processed)
 
-        let texture = self.ycbcr_image_to_texture(image);
         self.draw_texture_flipped(target, &self.ycbcr_drawing_program, texture)
     }
 

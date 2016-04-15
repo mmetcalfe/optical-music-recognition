@@ -1,7 +1,6 @@
 pub mod staff;
 
 use std::f32;
-use std::cmp;
 use nalgebra as na;
 use nalgebra::Norm;
 

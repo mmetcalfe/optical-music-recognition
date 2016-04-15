@@ -1,6 +1,3 @@
-
-use omr::scanning::staff_cross::StaffCross;
-use omr::ransac::staff_cross::StaffCrossLine;
 use geometry::staff::Staff;
 use ffmpeg_camera::image::Image;
 use std;
@@ -78,13 +75,12 @@ pub fn partition_staff<I: Image>(image: &I, staff: &Staff) -> (Vec<Staff>, Vec<S
     // Classify samples:
     let step_size = staff.line_sep() * 0.5;
     let (t_min, t_max) = staff.screen_entry_exit_times(image.width() as f32, image.height() as f32);
-    let mut span_start = t_min;
     let mut t = t_min;
     while t + step_size < t_max {
         t += step_size;
 
-        let mut line_avg = staff_sample_average(image, staff, t, 5, staff.line_sep());
-        let mut space_avg = staff_sample_average(image, staff, t, 4, staff.line_sep());
+        let line_avg = staff_sample_average(image, staff, t, 5, staff.line_sep());
+        let space_avg = staff_sample_average(image, staff, t, 4, staff.line_sep());
 
         // Blank spaces:
         let blank_samples = 20;
@@ -106,7 +102,6 @@ pub fn partition_staff<I: Image>(image: &I, staff: &Staff) -> (Vec<Staff>, Vec<S
     let max_weak_gap_samples = min_gap_samples;
     let max_weak_span_samples = min_gap_samples;
 
-    let mut gap_length = 0;
     let mut gap_start : isize = -1;
     let mut span_start : isize = -1;
     let mut weak_count = 0;

@@ -1,9 +1,10 @@
 pub mod staff_cross;
 
 use rand;
-use rand::SeedableRng;
+// use rand::SeedableRng;
 use rand::Rng;
-use rand::distributions::{IndependentSample, Range};
+use rand::distributions::IndependentSample;
+// use rand::distributions::Range;
 use std;
 
 #[inline(never)]
