@@ -257,8 +257,8 @@ fn main() {
                     // }
                 }
 
-                let (staff_segments, blank_segments) = omr::refinement::partition_staff(&ycbcr_frame, &staff);
-                for part in staff_segments {
+                let (candidate_segments, blank_segments) = omr::refinement::partition_staff(&ycbcr_frame, &staff);
+                for part in &candidate_segments {
                     let staff_pt1 = part.point_at_time(0.0);
                     let staff_pt2 = part.point_at_time(part.length);
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
@@ -271,6 +271,12 @@ fn main() {
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
                     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 4.0, [0.0, 0.0, 0.0, 1.0]);
+                }
+
+                let staff_segments = candidate_segments.iter()
+                    .filter(|segment| omr::refinement::staff_segment_is_valid(&ycbcr_frame, &segment));
+                for segment in staff_segments {
+                    draw_ctx.draw_staff_in_image(&mut target, &ycbcr_frame, &segment, [0.8, 0.3, 1.0, 1.0]);
                 }
             }
         }

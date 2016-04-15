@@ -130,7 +130,7 @@ impl<'a> DrawingContext<'a> {
         self.draw_line(target, e1, e2, lw, colour);
     }
 
-    pub fn draw_staff(&self, target: &mut glium::Frame, p1: na::Vec2<f32>, p2: na::Vec2<f32>, sw: f32, lw: f32, colour: [f32; 4]) {
+    pub fn draw_staff_from_parts(&self, target: &mut glium::Frame, p1: na::Vec2<f32>, p2: na::Vec2<f32>, sw: f32, lw: f32, colour: [f32; 4]) {
         let dir = na::normalize(&(p2 - p1));
         let norm = na::Vec2::new(dir[1], -dir[0]);
 
@@ -148,6 +148,21 @@ impl<'a> DrawingContext<'a> {
         }
 
         // self.draw_lines(target, &lines, lw, colour);
+    }
+
+    pub fn draw_staff_in_image(&self, target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, staff: &gm::staff::Staff, colour: [f32; 4]) {
+        let start_pt = staff.point_at_time(0.0);
+        let end_pt = staff.point_at_time(staff.length);
+        let p1 = ycbcr_frame.opengl_coords_for_point(start_pt);
+        let p2 = ycbcr_frame.opengl_coords_for_point(end_pt);
+        self.draw_staff_from_parts(
+            target,
+            p1,
+            p2,
+            staff.space_width,
+            staff.line_width,
+            colour
+        )
     }
 
     pub fn draw_staff_cross(&self, mut target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, cross: &StaffCross, colour: [f32; 4]) {
@@ -237,7 +252,7 @@ impl<'a> DrawingContext<'a> {
             let p2 = ycbcr_frame.opengl_coords_for_point(line.b);
 
             let staff_col = [0.4, 0.6, 0.4, 1.0];
-            self.draw_staff(&mut target, p1, p2,
+            self.draw_staff_from_parts(&mut target, p1, p2,
                 avg_space_width,
                 avg_line_width,
                 staff_col

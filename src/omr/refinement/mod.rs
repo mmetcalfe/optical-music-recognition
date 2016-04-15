@@ -185,6 +185,6 @@ pub fn partition_staff<I: Image>(image: &I, staff: &Staff) -> (Vec<Staff>, Vec<S
     (staff_segments, blank_segments)
 }
 
-// pub fn refine_detected_staff(line: &StaffCrossLine, inliers: &Vec<StaffCross>) -> bool {
-//     true
-// }
+pub fn staff_segment_is_valid<I: Image>(image: &I, staff: &Staff) -> bool {
+    true
+}
