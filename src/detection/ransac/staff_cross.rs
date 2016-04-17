@@ -1,6 +1,6 @@
 
-use omr::ransac::RansacModel;
-use omr::scanning::staff_cross::StaffCross;
+use detection::ransac::RansacModel;
+use detection::scanning::staff_cross::StaffCross;
 // use nalgebra as na;
 use geometry as gm;
 use nalgebra as na;

@@ -7,6 +7,6 @@ extern crate rgsl;
 
 pub mod ffmpeg_camera;
 pub mod drawing;
-pub mod omr;
+pub mod detection;
 pub mod geometry;
 pub mod math;

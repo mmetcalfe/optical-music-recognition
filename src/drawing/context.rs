@@ -10,9 +10,9 @@ use ffmpeg_camera::image::Image;
 use glium;
 use nalgebra as na;
 
-use omr::scanning::staff_cross::StaffCross;
-use omr::ransac::staff_cross::StaffCrossLine;
-use omr::ransac::RansacState;
+use detection::scanning::staff_cross::StaffCross;
+use detection::ransac::staff_cross::StaffCrossLine;
+use detection::ransac::RansacState;
 use geometry as gm;
 
 // use std::f32;

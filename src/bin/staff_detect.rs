@@ -6,19 +6,19 @@ extern crate time;
 
 // use std::f32;
 
-extern crate optical_music_recognition;
-use optical_music_recognition::ffmpeg_camera::ffmpeg_camera;
-use optical_music_recognition::ffmpeg_camera::image::Image;
-use optical_music_recognition::drawing;
-use optical_music_recognition::omr;
-use optical_music_recognition::math;
-use optical_music_recognition::geometry;
-use optical_music_recognition::omr::ransac::staff_cross::StaffCrossLineModel;
-use optical_music_recognition::omr::scanning::staff_cross::StaffCross;
+extern crate optical_music_recognition as omr;
+use omr::ffmpeg_camera::ffmpeg_camera;
+use omr::ffmpeg_camera::image::Image;
+use omr::drawing;
+use omr::math;
+use omr::geometry;
+use omr::geometry as gm;
+use omr::detection::ransac::staff_cross::StaffCrossLineModel;
+use omr::detection::scanning::staff_cross::StaffCross;
+
 // use std::io::Cursor;
 use glium::DisplayBuild;
 use glium::Surface;
-use optical_music_recognition::geometry as gm;
 use std::cmp;
 
 use time::Duration;
@@ -96,7 +96,7 @@ fn main() {
 
         // Scan entire image for StaffCross points:
         let num_scan_lines = std::cmp::min(640, img_w / 2);
-        let cross_points = omr::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
+        let cross_points = omr::detection::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
 
         // Draw detected StaffCross points:
         // for cross in &cross_points {
@@ -106,7 +106,7 @@ fn main() {
 
 
         // // Draw segments:
-        // let segments = omr::scanning::segment::scan_entire_image(&ycbcr_frame, num_scan_lines);
+        // let segments = omr::detection::scanning::segment::scan_entire_image(&ycbcr_frame, num_scan_lines);
         // // let x = 256;
         // for segment in segments.iter() {
         //     // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
@@ -131,7 +131,7 @@ fn main() {
         //     draw_ctx.draw_line(&mut target, p1, p2, pix_h, col);
         // }
 
-        let num_iterations = omr::ransac::calculate_num_iterations(
+        let num_iterations = omr::detection::ransac::calculate_num_iterations(
             cross_points.len(), // num_points
             cross_points.len() / 20, // num_inliers
             2, // points_per_model
@@ -141,16 +141,16 @@ fn main() {
         // println!("num_iterations: {:?}", num_iterations);
 
         // Run RANSAC on the StaffCross points to find a line:
-        let params = omr::ransac::RansacParams {
+        let params = omr::detection::ransac::RansacParams {
             num_iterations: num_iterations,
             max_distance: 111.0, // not currently used
             min_inliers: 15,
         };
-        // let maybe_line = omr::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
-        // let state = omr::ransac::ransac::<StaffCrossLineModel,_,_>(&params, &cross_points);
+        // let maybe_line = omr::detection::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
+        // let state = omr::detection::ransac::ransac::<StaffCrossLineModel,_,_>(&params, &cross_points);
         // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
-        let states = omr::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
+        let states = omr::detection::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
         for state in &states {
             // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
@@ -165,7 +165,7 @@ fn main() {
 
             let mut is_staff = false;
             if let Some(ref detected_line) = state.model {
-                // is_staff = omr::refinement::refine_detected_staff(&detected_line, &state.inliers);
+                // is_staff = omr::detection::refinement::refine_detected_staff(&detected_line, &state.inliers);
 
                 // detected_line
                 // best_line
@@ -234,33 +234,33 @@ fn main() {
                     }
                     blank_avg /= num_samples as f32;
 
-                    let class = omr::refinement::classify_staff_sample(line_avg, space_avg, blank_avg);
+                    let class = omr::detection::refinement::classify_staff_sample(line_avg, space_avg, blank_avg);
 
                     let p_t = best_line.point_at_time(t);
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
 
-                    if class == omr::refinement::StaffEvidenceClass::Blank {
+                    if class == omr::detection::refinement::StaffEvidenceClass::Blank {
                         // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
                     }
-                    if class == omr::refinement::StaffEvidenceClass::Strong {
+                    if class == omr::detection::refinement::StaffEvidenceClass::Strong {
                         // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.3, 0.0, 1.0]);
                     }
-                    if class == omr::refinement::StaffEvidenceClass::Partial {
+                    if class == omr::detection::refinement::StaffEvidenceClass::Partial {
                         // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.8, 0.0, 1.0]);
                     }
-                    if class == omr::refinement::StaffEvidenceClass::Weak {
+                    if class == omr::detection::refinement::StaffEvidenceClass::Weak {
                         // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.3, 0.6, 0.0, 1.0]);
                     }
-                    if class == omr::refinement::StaffEvidenceClass::Negative {
+                    if class == omr::detection::refinement::StaffEvidenceClass::Negative {
                         // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 1.0, 1.0]);
                     }
-                    // if class == omr::refinement::StaffEvidenceClass::None {
+                    // if class == omr::detection::refinement::StaffEvidenceClass::None {
                     //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.5, 1.0, 1.0]);
                     // }
                 }
 
-                let (candidate_segments, blank_segments) = omr::refinement::partition_staff(&ycbcr_frame, &staff);
+                let (candidate_segments, blank_segments) = omr::detection::refinement::partition_staff(&ycbcr_frame, &staff);
                 for part in &candidate_segments {
                     let staff_pt1 = part.point_at_time(0.0);
                     let staff_pt2 = part.point_at_time(part.length);
@@ -277,7 +277,7 @@ fn main() {
                 }
 
                 let staff_segments = candidate_segments.iter()
-                    .filter(|segment| omr::refinement::staff_segment_is_valid(&ycbcr_frame, &segment));
+                    .filter(|segment| omr::detection::refinement::staff_segment_is_valid(&ycbcr_frame, &segment));
                 for segment in staff_segments {
                     draw_ctx.draw_staff_in_image(&mut target, &ycbcr_frame, &segment, [0.8, 0.3, 1.0, 1.0]);
                 }

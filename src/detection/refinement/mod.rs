@@ -125,9 +125,11 @@ pub fn partition_staff<I: Image>(image: &I, staff: &Staff) -> (Vec<Staff>, Vec<S
                 gap_start = i as isize;
                 weak_count = 0;
 
-                let span_end = (i - 1) as isize;
-                if span_end - span_start >= min_span_samples as isize {
-                    sample_staff_spans.push((span_start as usize, span_end as usize));
+                if span_start >= 0 {
+                    let span_end = (i - 1) as isize;
+                    if span_end - span_start >= min_span_samples as isize {
+                        sample_staff_spans.push((span_start as usize, span_end as usize));
+                    }
                 }
             }
         } else {

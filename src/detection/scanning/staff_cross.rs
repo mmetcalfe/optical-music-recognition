@@ -4,7 +4,7 @@ extern crate core;
 // use ffmpeg_camera::image_ycbcr;
 use ffmpeg_camera::image::Image;
 use nalgebra as na;
-use omr::scanning::segment;
+use detection::scanning::segment;
 use std::collections::LinkedList;
 use std::cmp;
 use geometry as gm;
