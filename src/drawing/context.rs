@@ -272,4 +272,9 @@ impl<'a> DrawingContext<'a> {
         self.image_pane.convert_uyvy_ycbcr(uyvy_image)
     }
 
+    pub fn convert_preprocess_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        self.image_pane.convert_preprocess_uyvy_ycbcr(uyvy_image)
+    }
+
 }

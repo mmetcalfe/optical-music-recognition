@@ -149,6 +149,18 @@ impl<'a> ImagePane<'a> {
         texture
     }
 
+    pub fn convert_preprocess_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        let src_texture = self.uyvy_image_to_texture(uyvy_image);
+
+        let processed = self.run_programs_on_texture(&src_texture, &[
+            &self.uyuv_ycbcr_conversion_program,
+            &self.adaptive_threshold_program
+        ]).unwrap();
+
+        Ok(texture_to_image(&processed))
+    }
+
     pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
         -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
         let src_texture = self.uyvy_image_to_texture(uyvy_image);
@@ -164,12 +176,7 @@ impl<'a> ImagePane<'a> {
 
         self.draw_texture_to_framebuffer(&mut framebuffer, &self.uyuv_ycbcr_conversion_program, &src_texture);
 
-        // Ok(texture_to_image(&dst_texture))
-
-        let processed = self.run_programs_on_texture(&dst_texture, &[
-            &self.adaptive_threshold_program
-        ]).unwrap();
-        Ok(texture_to_image(&processed))
+        Ok(texture_to_image(&dst_texture))
     }
 
     pub fn run_programs_on_texture(&self, input_texture: &glium::texture::Texture2d, programs: &[&glium::Program])

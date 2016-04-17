@@ -256,9 +256,9 @@ impl FfmpegCamera {
         self.get_image::<image_uyvy::Image>(ffmpeg_sys::AV_PIX_FMT_UYVY422)
     }
 
-    pub fn get_image_ycbcr(&mut self) -> Result<image_ycbcr::Image, FfmpegError> {
-        self.get_image::<image_ycbcr::Image>(ffmpeg_sys::AV_PIX_FMT_YUV444P)
-    }
+    // pub fn get_image_ycbcr(&mut self) -> Result<image_ycbcr::Image, FfmpegError> {
+    //     self.get_image::<image_ycbcr::Image>(ffmpeg_sys::AV_PIX_FMT_YUV444P)
+    // }
 
     // pub fn get_image_uyvy(&mut self) -> Result<image_uyvy::Image, FfmpegError> {
     //     let mut data : Vec<u8>;
@@ -388,6 +388,24 @@ impl FfmpegCamera {
         let framerate = "29.97";
 
         Self::get_camera(&video_filename, framerate, video_size)
+    }
+
+    pub fn get_best(video_size: (usize, usize)) -> Result<FfmpegCamera, FfmpegError> {
+        let mut camera =
+            Self::get_camera("HD Pro Webcam C920", "30.000030", video_size);
+
+        if camera.is_err() {
+            println!("Failed to open HD Pro Webcam C920. Opening USB Camera...");
+            camera =
+                Self::get_camera("USB Camera", "30.000030", video_size);
+
+            if camera.is_err() {
+                println!("Failed to open camera. Opening default camera...");
+                camera = Self::get_camera("default", "29.970000", video_size);
+            }
+        }
+
+        camera
     }
 
 }

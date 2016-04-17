@@ -35,22 +35,8 @@ fn main() {
     // let (img_w, img_h) = (1280, 720);
     let (img_w, img_h) = (1920, 1080);
 
-    let mut camera =
-        ffmpeg_camera::FfmpegCamera::get_camera("HD Pro Webcam C920", "30.000030", (img_w, img_h));
-
-
-    if camera.is_err() {
-        println!("Failed to open HD Pro Webcam C920. Opening USB Camera...");
-        camera =
-            ffmpeg_camera::FfmpegCamera::get_camera("USB Camera", "30.000030", (img_w, img_h));
-
-        if camera.is_err() {
-            println!("Failed to open camera. Opening default camera...");
-            camera = ffmpeg_camera::FfmpegCamera::get_camera("default", "29.970000", (img_w, img_h));
-        }
-    }
-
-    let mut camera = camera.expect("Failed to open camera.");
+    let mut camera = ffmpeg_camera::FfmpegCamera::get_best((img_w, img_h))
+        .expect("Failed to open camera.");
 
     let display = glium::glutin::WindowBuilder::new()
         // .with_dimensions(1280, 720)
@@ -80,7 +66,7 @@ fn main() {
         // webcam_frame.save_pgm("image.pgm").unwrap();
         // webcam_frame.save_jpeg("image_yuv422.jpg").unwrap();
 
-        let ycbcr_frame = draw_ctx.convert_uyvy_ycbcr(&webcam_frame).unwrap();
+        let ycbcr_frame = draw_ctx.convert_preprocess_uyvy_ycbcr(&webcam_frame).unwrap();
 
         // ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
 
