@@ -285,7 +285,13 @@ pub unsafe fn make_empty_avframe(width : usize, height : usize, pixel_format : f
     Ok(yuv420p_frame)
 }
 
-pub unsafe fn make_avframe(width: usize, height: usize, pixel_format: ffmpeg_sys::AVPixelFormat, data: &Vec<u8>) -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
+pub unsafe fn make_avframe(
+    width: usize,
+    height: usize,
+    pixel_format: ffmpeg_sys::AVPixelFormat,
+    data: &[u8])
+    // data: &Vec<u8>)
+    -> Result<*mut ffmpeg_sys::AVFrame, FfmpegError> {
     // let pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
     // let pixel_format = ffmpeg_sys::AV_PIX_FMT_YUV444P;
 
@@ -319,6 +325,7 @@ pub unsafe fn make_avframe(width: usize, height: usize, pixel_format: ffmpeg_sys
     // println!("(*yuyv_frame).data: {:?}", (*yuyv_frame).data);
 
     (*yuyv_frame).data[0] = data.as_ptr() as *mut u8;
+    // (*yuyv_frame).data[0] = ((&data[0]) as *const u8) as *mut u8;
 
     // println!("(*yuyv_frame).data: {:?}", (*yuyv_frame).data);
     // println!("(*yuyv_frame).linesize: {:?}", (*yuyv_frame).linesize);

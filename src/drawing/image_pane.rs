@@ -134,7 +134,12 @@ impl<'a> ImagePane<'a> {
     }
 
     pub fn ycbcr_image_to_texture(&self, image : &image_ycbcr::Image) -> glium::texture::Texture2d {
-        let cow: Cow<[_]> = Cow::Borrowed(&image.data);
+        let cow: Cow<[_]> = Cow::Borrowed(&image.local_data);
+
+        // let data = image.to_byte_vector();
+        // let cow: Cow<[_]> = Cow::Borrowed(&data);
+
+        // let cow: Cow<[_]> = Cow::Borrowed(&image.data);
         // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
         let img_w = image.width as u32;
         let img_h = image.height as u32;

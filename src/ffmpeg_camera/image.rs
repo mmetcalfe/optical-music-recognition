@@ -20,7 +20,7 @@ pub trait Image : Clone {
 
     fn width(&self) -> usize; // width in pixels
     fn height(&self) -> usize; // height in pixels
-    fn data(&self) -> &Vec<u8>; // raw data buffer
+    // fn data(&self) -> &Vec<u8>; // raw data buffer
 
     fn index(&self, col : usize, row : usize) -> Pixel;
     // fn sample_point(&self, pt: na::Vec2<f32>) -> Pixel {

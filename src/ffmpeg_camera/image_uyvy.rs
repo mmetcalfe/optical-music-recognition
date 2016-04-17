@@ -33,9 +33,9 @@ impl image::Image for Image {
     fn height(&self) -> usize {
         self.height
     }
-    fn data(&self) -> &Vec<u8> {
-        &self.data
-    }
+    // fn data(&self) -> &Vec<u8> {
+    //     &self.data
+    // }
 
     fn index(&self, col : usize, row : usize) -> image::Pixel {
         if !self.contains(col, row) {
