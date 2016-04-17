@@ -92,6 +92,8 @@ fn main() {
 
         let staff_cross_col = [0.6, 0.2, 0.0, 1.0];
 
+        let fitting_start_time = SteadyTime::now();
+
         // Scan entire image for StaffCross points:
         let num_scan_lines = std::cmp::min(640, img_w / 2);
         let cross_points = omr::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
@@ -283,6 +285,7 @@ fn main() {
         }
 
         let frame_duration = SteadyTime::now() - frame_start_time;
+        let fitting_duration = SteadyTime::now() - fitting_start_time;
         frame_start_time = SteadyTime::now();
         let mspf = frame_duration.num_milliseconds();
         let fps = 1000.0 / (mspf as f32);
