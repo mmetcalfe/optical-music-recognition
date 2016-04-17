@@ -9,6 +9,7 @@ Install dependencies:
 
     $ brew install rust
     $ brew install ffmpeg --with-ffplay # Install FFmpeg
+    $ brew install homebrew/science/arrayfire
 
 Clone the `ffmpeg-sys` repository: https://crates.io/crates/ffmpeg-sys.
 The current version from crates.io detects your ffmpeg config incorrectly, which can lead to weird behaviour and memory corruption.

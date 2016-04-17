@@ -14,6 +14,8 @@ glium_text = "0.8.0"
 
 GSL = "0.4"
 
+arrayfire = "3.2.0"
+
 # piston2d-graphics = "*"
 # piston2d-glium_graphics = "*"
 # piston = "*"
