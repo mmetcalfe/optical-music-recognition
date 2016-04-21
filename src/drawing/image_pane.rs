@@ -6,6 +6,7 @@ use glium::Surface;
 use std::borrow::Cow;
 use ffmpeg_camera::ffmpeg_utils;
 use super::glsl_functions;
+use utility;
 
 extern crate core;
 // use self::core::ops::Deref;
@@ -24,7 +25,7 @@ pub fn texture_to_image(texture : &glium::texture::Texture2d) -> image_ycbcr::Im
     // Note: This step is unstable, as it relies on undefined behaviour. Rust does not define
     // the memory layout of tuples, but we assume here that the obvious layout is used (i.e.
     // the fields are packed together and are layed out in declaration order).
-    let data = ffmpeg_utils::vec_to_bytes(local_buffer);
+    let data = utility::vec_to_bytes(local_buffer);
 
     image_ycbcr::Image::from_raw_parts(
         texture.get_width() as usize,

@@ -98,7 +98,6 @@ fn main() {
         // webcam_frame.save_jpeg("image_uyvy.jpg").unwrap();
         let ycbcr_frame = draw_ctx.convert_uyvy_ycbcr(&webcam_frame).unwrap();
 
-
         // println!("Sequence:");
         // let seqs = &[
         //     af::Seq::default(),
@@ -142,13 +141,13 @@ fn main() {
         // println!("shape: {}", img_ycbcr.dims().unwrap());
         // let img_grey = af::color_space(&img_ycbcr, af::ColorSpace::GRAY, af::ColorSpace::RGB).unwrap();
 
-        println!("backend: {:?}", img_grey.get_backend());
-        println!("shape: {:?}", img_grey.dims().unwrap());
-        match img_grey.get_type().unwrap() {
-            af::Aftype::F32 => println!("type: f32"),
-            _ => println!("type: UNKNOWN"),
-        }
-        println!("numdims: {:?}", img_grey.numdims().unwrap());
+        // println!("backend: {:?}", img_grey.get_backend());
+        // println!("shape: {:?}", img_grey.dims().unwrap());
+        // match img_grey.get_type().unwrap() {
+        //     af::Aftype::F32 => println!("type: f32"),
+        //     _ => println!("type: UNKNOWN"),
+        // }
+        // println!("numdims: {:?}", img_grey.numdims().unwrap());
 
         // let num_rows: u64 = 200;
         // let num_cols: u64 = 200;
@@ -156,11 +155,11 @@ fn main() {
         // let img_grey = af::randu::<f32>(dims).unwrap();
 
 
-        let fast_thr = 20.0;
-        let max_feat = 200;
+        let fast_thr = 80.0;
+        let max_feat = 50;
         let scl_fctr = 1.5;
         let levels = 4;
-        let blur_img = false;
+        let blur_img = true;
         {
             println!("orb:");
             // TODO: Find out why af::orb only succeeds for 320x240 images.
@@ -179,19 +178,10 @@ fn main() {
                 println!("num_features: {:?}", num_features);
                 if num_features > 0 {
                     let af_xpos = orb_features.xpos().unwrap();
-                    // af::print(&af_xpos);
-                    println!("af_xpos.elements(): {:?}", af_xpos.elements().unwrap());
-
-                    match af_xpos.get_type().unwrap() {
-                        af::Aftype::F32 => println!("type: f32"),
-                        _ => println!("type: UNKNOWN"),
-                    }
-                    let mut xpos = ffmpeg_utils::make_uninitialised_vec::<f32>(af_xpos.elements().unwrap() as usize);
-                    af_xpos.host(&mut xpos);
+                    let xpos = omr::utility::af_util::host_to_vec(&af_xpos);
 
                     let af_ypos = orb_features.ypos().unwrap();
-                    let mut ypos = ffmpeg_utils::make_uninitialised_vec::<f32>(af_ypos.elements().unwrap() as usize);
-                    af_ypos.host(&mut ypos);
+                    let ypos = omr::utility::af_util::host_to_vec(&af_ypos);
 
                     for i in 0..num_features {
                         let x = xpos[i];

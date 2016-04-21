@@ -11,27 +11,7 @@ use std::str::*;
 use std::error;
 use std::fmt;
 
-pub fn make_uninitialised_vec<T>(length : usize) -> Vec<T> {
-    // See: https://doc.rust-lang.org/std/vec/struct.Vec.html#method.from_raw_parts
-    let mut tmp_data = Vec::<T>::with_capacity(length);
-    let data_ptr = tmp_data.as_mut_ptr();
-    unsafe {
-        mem::forget(tmp_data); // Don't run tmp_data's destructor.
-        // Create a full vector of uninitialised values:
-        Vec::from_raw_parts(data_ptr, length, length)
-    }
-}
-
-pub fn vec_to_bytes<T>(mut input_vec: Vec<T>) -> Vec<u8> {
-    // See: https://doc.rust-lang.org/std/vec/struct.Vec.html#method.from_raw_parts
-    let size = mem::size_of::<T>()*input_vec.len();
-    let data_ptr = input_vec.as_mut_ptr();
-    unsafe {
-        mem::forget(input_vec); // Don't run input_vec's destructor.
-        // Create a full vector of uninitialised values:
-        Vec::from_raw_parts(data_ptr as *mut u8, size, size)
-    }
-}
+use utility;
 
 // Define an error type for FFmpeg:
 #[derive(Debug)]
@@ -205,7 +185,7 @@ pub unsafe fn make_frame_buffer_vec(width: usize, height: usize, pixel_format: f
     );
 
     // Create the buffer:
-    make_uninitialised_vec(num_bytes as usize)
+    utility::make_uninitialised_vec(num_bytes as usize)
 }
 
 pub unsafe fn copy_frame_data_to_vec(frame: *mut ffmpeg_sys::AVFrame) -> Result<Vec<u8>, FfmpegError> {

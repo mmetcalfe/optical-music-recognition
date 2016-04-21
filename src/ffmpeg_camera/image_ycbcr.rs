@@ -6,6 +6,7 @@ use ffmpeg_camera::ffmpeg_utils::FfmpegError;
 // use nalgebra as na;
 use std;
 use ffmpeg_camera::image;
+use utility;
 
 #[derive(Clone)]
 pub struct Image {
@@ -26,7 +27,7 @@ impl Image {
     // pub fn to_byte_vector(&self) -> Vec<u8> {
     //     // af::print(&self.data);
     //     // println!("elements: {:?}", self.data.elements().unwrap());
-    //     // let mut tmp_data = ffmpeg_utils::make_uninitialised_vec::<f32>(self.data.elements().unwrap() as usize);
+    //     // let mut tmp_data = utility::make_uninitialised_vec::<f32>(self.data.elements().unwrap() as usize);
     //     // self.data.host(&mut tmp_data);
     //     // let data_ptr = tmp_data.as_mut_ptr() as *mut u8;
     //     // let num_bytes = tmp_data.len() * std::mem::size_of::<f32>();
@@ -38,7 +39,7 @@ impl Image {
     //
     //     match self.af_data.get_type().unwrap() {
     //         af::Aftype::U8 => {
-    //             let mut tmp_data = ffmpeg_utils::make_uninitialised_vec::<u8>(self.af_data.elements().unwrap() as usize);
+    //             let mut tmp_data = utility::make_uninitialised_vec::<u8>(self.af_data.elements().unwrap() as usize);
     //             self.af_data.host(&mut tmp_data);
     //             tmp_data
     //         },
@@ -84,7 +85,7 @@ impl Image {
         // i.e. [bbb ggg rrr aaa] -> [bgra bgra bgra]
         let img_32bit = af::reorder(&img_32bit, af::Dim4::new(&[2, 1, 0, 3])).unwrap();
         let num_bytes = img_32bit.elements().unwrap() as usize;
-        let mut local_data = ffmpeg_utils::make_uninitialised_vec::<u8>(num_bytes);
+        let mut local_data = utility::make_uninitialised_vec::<u8>(num_bytes);
         println!("local_data: {:?}", local_data.as_mut_ptr());
         img_32bit.host(&mut local_data);
 

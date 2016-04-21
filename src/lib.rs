@@ -10,3 +10,4 @@ pub mod drawing;
 pub mod detection;
 pub mod geometry;
 pub mod math;
+pub mod utility;
