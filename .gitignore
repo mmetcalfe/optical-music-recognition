@@ -5,6 +5,8 @@ target
 *.pgm
 *.jpg
 
+/example/build/
+
 # Elm
 /web/elm-stuff/
 /web/Random-dev

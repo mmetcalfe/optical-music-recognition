@@ -67,7 +67,14 @@ impl image::Image for Image {
     // Based on: https://lists.libav.org/pipermail/libav-user/2010-August/005159.html
     fn save_jpeg(&self, save_fname : &str) -> Result<(), FfmpegError> {
         unsafe {
-            let mut yuyv422_frame = try!(ffmpeg_utils::make_avframe(self.width, self.height, ffmpeg_sys::AV_PIX_FMT_UYVY422, &self.data));
+            let mut yuyv422_frame = try!(
+                ffmpeg_utils::make_avframe(
+                    self.width,
+                    self.height,
+                    ffmpeg_sys::AV_PIX_FMT_UYVY422,
+                    &self.data
+                )
+            );
             try!(ffmpeg_utils::save_frame_to_jpeg(yuyv422_frame, save_fname));
             ffmpeg_sys::av_frame_free(&mut yuyv422_frame);
         }

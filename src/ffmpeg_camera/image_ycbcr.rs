@@ -23,38 +23,97 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn to_byte_vector(&self) -> Vec<u8> {
-        // af::print(&self.data);
-        // println!("elements: {:?}", self.data.elements().unwrap());
-        // let mut tmp_data = ffmpeg_utils::make_uninitialised_vec::<f32>(self.data.elements().unwrap() as usize);
-        // self.data.host(&mut tmp_data);
-        // let data_ptr = tmp_data.as_mut_ptr() as *mut u8;
-        // let num_bytes = tmp_data.len() * std::mem::size_of::<f32>();
-        // println!("num_bytes: {:?}", num_bytes);
-        // unsafe {
-        //     std::mem::forget(tmp_data); // Don't run tmp_data's destructor.
-        //     Vec::from_raw_parts(data_ptr, num_bytes, num_bytes)
-        // }
+    // pub fn to_byte_vector(&self) -> Vec<u8> {
+    //     // af::print(&self.data);
+    //     // println!("elements: {:?}", self.data.elements().unwrap());
+    //     // let mut tmp_data = ffmpeg_utils::make_uninitialised_vec::<f32>(self.data.elements().unwrap() as usize);
+    //     // self.data.host(&mut tmp_data);
+    //     // let data_ptr = tmp_data.as_mut_ptr() as *mut u8;
+    //     // let num_bytes = tmp_data.len() * std::mem::size_of::<f32>();
+    //     // println!("num_bytes: {:?}", num_bytes);
+    //     // unsafe {
+    //     //     std::mem::forget(tmp_data); // Don't run tmp_data's destructor.
+    //     //     Vec::from_raw_parts(data_ptr, num_bytes, num_bytes)
+    //     // }
+    //
+    //     match self.af_data.get_type().unwrap() {
+    //         af::Aftype::U8 => {
+    //             let mut tmp_data = ffmpeg_utils::make_uninitialised_vec::<u8>(self.af_data.elements().unwrap() as usize);
+    //             self.af_data.host(&mut tmp_data);
+    //             tmp_data
+    //         },
+    //         _ => unimplemented!(),
+    //     }
+    // }
 
-        let mut tmp_data = ffmpeg_utils::make_uninitialised_vec::<u8>(self.af_data.elements().unwrap() as usize);
-        self.af_data.host(&mut tmp_data);
-        tmp_data
+    pub fn from_af_array(rgb_array: af::Array) -> Image {
+
+        // rgb array is in the format loaded from af::load_image.
+        // e.g. a 3x1 image looks like [bbb ggg rrr].
+
+        let dims = rgb_array.dims().unwrap();
+        let height = dims[0];
+        let width = dims[1];
+
+        let zeroes_dims = af::Dim4::new(&[height, width, 1, 1]);
+        let zeroes = af::constant::<f32>(0.0, zeroes_dims).unwrap();
+
+        println!("dims: {:?}, zeroes_dims: {:?}", dims, zeroes_dims);
+
+        println!("from_af_array, join:");
+        // Append an alpha channel:
+        // [bbb ggg rrr] -> [bbb ggg rrr aaa]
+        let data_array = af::join(2, &rgb_array, &zeroes).unwrap();
+        println!("data_array, shape: {}", data_array.dims().unwrap());
+        println!("data_array, elements: {}", data_array.elements().unwrap());
+
+        // println!("from_af_array, host:");
+        // let num_bytes = match data_array.get_type().unwrap() {
+        //     af::Aftype::U8 => {
+        //         data_array.elements().unwrap() as usize
+        //     },
+        //     af::Aftype::F32 => {
+        //         std::mem::size_of::<f32>() * data_array.elements().unwrap() as usize
+        //     },
+        //     _ => unimplemented!(),
+        // };
+
+        let img_32bit = data_array.cast::<u8>().unwrap();
+        // let img_32bit = af::transpose(&img_32bit, false).unwrap();
+        // Convert arrayfire image format into an interleaved format:
+        // i.e. [bbb ggg rrr aaa] -> [bgra bgra bgra]
+        let img_32bit = af::reorder(&img_32bit, af::Dim4::new(&[2, 1, 0, 3])).unwrap();
+        let num_bytes = img_32bit.elements().unwrap() as usize;
+        let mut local_data = ffmpeg_utils::make_uninitialised_vec::<u8>(num_bytes);
+        println!("local_data: {:?}", local_data.as_mut_ptr());
+        img_32bit.host(&mut local_data);
+
+        println!("image:");
+        Image {
+            width: width as usize,
+            height: height as usize,
+            local_data: local_data,
+            af_data: data_array,
+        }
     }
 }
 
 
 impl image::Image for Image {
     fn from_raw_parts(width: usize, height: usize, data: Vec<u8>) -> Image {
+        // Data is an array containing raw interleaved YCbCrA data.
         // let shape = [height as u64, width as u64, 4, 1];
-        let shape = [width as u64, height as u64, 4, 1];
-        let array = af::Array::new(af::Dim4::new(&shape), &data, af::Aftype::U8).unwrap();
+        let shape = [4, width as u64, height as u64, 1];
+        let img_32bit = af::Array::new(&data, af::Dim4::new(&shape)).unwrap();
+        // i.e. [YCbCrA YCbCrA YCbCrA] -> [YYY CbCb CrCr AAA]
+        let img_32bit = af::reorder(&img_32bit, af::Dim4::new(&[2, 1, 0, 3])).unwrap();
 
         Image {
             width: width,
             height: height,
             // data: data,
             local_data: data,
-            af_data: array,
+            af_data: img_32bit,
         }
     }
 
