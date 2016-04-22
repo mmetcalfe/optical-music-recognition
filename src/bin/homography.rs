@@ -63,24 +63,26 @@ fn main() {
     println!("Available ArrayFire backends: {:?}", af::get_available_backends());
 
     // let (img_w, img_h) = (320, 240);
-    let (img_w, img_h) = (640, 480);
-    // let (img_w, img_h) = (1280, 720);
+    // let (img_w, img_h) = (640, 480);
+    let (img_w, img_h) = (1280, 720);
     // let (img_w, img_h) = (1920, 1080);
 
     let mut camera = ffmpeg_camera::FfmpegCamera::get_best((img_w, img_h))
         .expect("Failed to open camera.");
 
+    let window_dims = (img_w, img_h);
     println!("Create display:");
     let display = glium::glutin::WindowBuilder::new()
         // .with_dimensions(1280, 720)
         // .with_dimensions(img_w as u32*4, img_h as u32*4)
-        .with_dimensions(img_w as u32, img_h as u32)
+        .with_dimensions(window_dims.0 as u32, window_dims.1 as u32)
         .with_title(format!("OMR"))
         .build_glium()
         .unwrap();
 
     println!("Create drawing context:");
     let mut draw_ctx = drawing::context::DrawingContext::new(&display);
+    draw_ctx.set_window_dims(window_dims);
     draw_ctx.set_view_matrices_for_image_dimensions(img_w, img_h);
 
     let mut frame_start_time = SteadyTime::now();

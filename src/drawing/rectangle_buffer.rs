@@ -2,12 +2,8 @@ use glium;
 use glium::Surface;
 use super::glsl_functions;
 
-#[derive(Copy, Clone)]
-pub struct RotatedRectangle {
-    pub position : [f32; 2],
-    pub size : [f32; 2],
-    pub angle : f32,
-}
+use geometry::RotatedRectangle;
+
 implement_vertex!(RotatedRectangle, position, size, angle);
 
 #[derive(Copy, Clone)]

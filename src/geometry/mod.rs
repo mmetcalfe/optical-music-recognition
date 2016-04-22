@@ -1,4 +1,7 @@
 pub mod staff;
+pub mod rotated_rectangle;
+
+pub use self::rotated_rectangle::RotatedRectangle;
 
 use std::f32;
 use nalgebra as na;

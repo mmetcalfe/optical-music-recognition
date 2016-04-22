@@ -1,6 +1,6 @@
 
 use drawing::rectangle_buffer::RectangleBuffer;
-use drawing::rectangle_buffer::RotatedRectangle;
+use geometry::RotatedRectangle;
 use drawing::image_pane::ImagePane;
 use drawing::text_helper::TextHelper;
 
@@ -17,11 +17,19 @@ use geometry as gm;
 
 // use std::f32;
 
+// Manages all drawing operations:
 pub struct DrawingContext<'a> {
     image_pane : ImagePane<'a>,
     rectangle_buffer : RectangleBuffer,
     text_helper : TextHelper,
+    window_dims: (usize, usize),
 }
+
+// // Provides a coordinate system in which to draw:
+// pub struct DrawingFrame<'a> {
+//     ctx: &'a DrawingContext,
+//     rect: gm::RotatedRectangle,
+// }
 
 impl<'a> DrawingContext<'a> {
     pub fn new(display : &glium::Display) -> DrawingContext {
@@ -29,7 +37,12 @@ impl<'a> DrawingContext<'a> {
             image_pane: ImagePane::new(display),
             rectangle_buffer: RectangleBuffer::new(display.clone()),
             text_helper: TextHelper::new(display),
+            window_dims: (100, 100),
         }
+    }
+
+    pub fn set_window_dims(&mut self, dims: (usize, usize)) {
+        self.window_dims = dims;
     }
 
     pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vec2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
@@ -76,30 +89,6 @@ impl<'a> DrawingContext<'a> {
         self.image_pane.draw_image_ycbcr(target, image)
     }
 
-    pub fn line_to_rectangle(line: &gm::Line, lw: f32) -> RotatedRectangle {
-        let x1 = line.a[0];
-        let y1 = line.a[1];
-        let x2 = line.b[0];
-        let y2 = line.b[1];
-
-        let xd = x2 - x1;
-        let yd = y2 - y1;
-        let len = (xd*xd + yd*yd).sqrt();
-
-        let xa = (x1 + x2) / 2.0;
-        let ya = (y1 + y2) / 2.0;
-
-        let angle = -f32::atan2(yd, xd);
-
-        let rect = RotatedRectangle {
-            position: [xa, ya],
-            size: [len, lw],
-            angle: angle,
-        };
-
-        rect
-    }
-
     pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
         let rect = RotatedRectangle {
             position: [pt[0], pt[1]],
@@ -110,12 +99,12 @@ impl<'a> DrawingContext<'a> {
     }
 
     pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
-        let rect = Self::line_to_rectangle(&gm::Line::new(p1, p2), lw);
+        let rect = gm::RotatedRectangle::from_line(&gm::Line::new(p1, p2), lw);
         self.rectangle_buffer.draw_rectangle(target, &rect, colour)
     }
 
     pub fn draw_lines(&self, target : &mut glium::Frame, lines: &[gm::Line], lw : f32, colour : [f32; 4]) {
-        let rects : Vec<_> = lines.iter().map(|l| Self::line_to_rectangle(&l, lw)).collect();
+        let rects : Vec<_> = lines.iter().map(|l| gm::RotatedRectangle::from_line(&l, lw)).collect();
 
         self.rectangle_buffer.draw_rectangles(target, &rects, colour)
     }
