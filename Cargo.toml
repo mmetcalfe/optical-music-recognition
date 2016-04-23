@@ -4,23 +4,25 @@ version = "0.1.0"
 authors = ["Mitchell Metcalfe <mitchell.s.metcalfe@gmail.com>"]
 
 [dependencies]
-libc = "0.2"
+# libc = "0.2.10"
 # glium = "0.14.0"
+# nalgebra = "0.8.1"
+# rand = "0.3.14"
+# time = "0.1"
+# glium_text = "0.8.0"
+# GSL = "0.4.26"
+
+libc = "0.2"
+# glium = "0.14" # glium_text has not yet been updated on crates.io
 glium = "0.13.5"
-nalgebra = "0.5.1"
+glium_text = "0.8"
+nalgebra = "0.8"
 rand = "0.3.14"
 time = "0.1"
-
-glium_text = "0.8.0"
-
 GSL = "0.4"
 
-# piston2d-graphics = "*"
-# piston2d-glium_graphics = "*"
-# piston = "*"
-# piston_window = "*"
-# pistoncore-glutin_window = "*"
-# image = "*"
+# nalgebra = "0.5.1"
+# glium = "0.13.5"
 
 # arrayfire = "3.2.0" # Problem accessing members of a Features struct
 [dependencies.arrayfire]

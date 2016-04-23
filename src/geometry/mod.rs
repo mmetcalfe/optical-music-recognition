@@ -9,35 +9,35 @@ use nalgebra::Norm;
 
 #[derive(Debug)]
 pub struct Line {
-    pub a: na::Vec2<f32>,
-    pub b: na::Vec2<f32>,
+    pub a: na::Vector2<f32>,
+    pub b: na::Vector2<f32>,
 }
 
 impl Line {
 
     #[inline(never)]
-    pub fn new(a: na::Vec2<f32>, b: na::Vec2<f32>) -> Line {
+    pub fn new(a: na::Vector2<f32>, b: na::Vector2<f32>) -> Line {
         Line {
             a: a,
             b: b,
         }
     }
 
-    pub fn normal(&self) -> na::Vec2<f32> {
+    pub fn normal(&self) -> na::Vector2<f32> {
         let dir = self.a - self.b;
-        let norm = na::Vec2::new(dir[1], -dir[0]);
+        let norm = na::Vector2::new(dir[1], -dir[0]);
         na::normalize(&norm)
     }
 
     #[inline(never)]
-    pub fn distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
+    pub fn distance_to_point(&self, point: &na::Vector2<f32>) -> f32 {
         self.signed_distance_to_point(point).abs()
     }
 
     #[inline(never)]
-    pub fn signed_distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
+    pub fn signed_distance_to_point(&self, point: &na::Vector2<f32>) -> f32 {
         let dir = self.a - self.b;
-        let norm = na::Vec2::new(dir[1], -dir[0]);
+        let norm = na::Vector2::new(dir[1], -dir[0]);
 
         let norm_len = norm.norm();
 
@@ -49,7 +49,7 @@ impl Line {
         dist
     }
 
-    pub fn point_at_time(&self, time: f32) -> na::Vec2<f32> {
+    pub fn point_at_time(&self, time: f32) -> na::Vector2<f32> {
         let d = self.b - self.a;
 
         self.a + d * time

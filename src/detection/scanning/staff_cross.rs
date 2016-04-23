@@ -30,21 +30,21 @@ impl StaffCross {
         }
     }
 
-    // pub fn centre(&self) -> na::Vec2<f32> {
+    // pub fn centre(&self) -> na::Vector2<f32> {
     //     let sum_y : f32 = self.spans.iter().fold(0.0, |a, s| a + (s[0] + s[1]) as f32 / 2.0);
     //     let avg_y = sum_y / self.spans.len() as f32;
     //     let avg_x = self.x as f32;
     //
-    //     na::Vec2::new(avg_x, avg_y)
+    //     na::Vector2::new(avg_x, avg_y)
     // }
 
-    pub fn centre(&self) -> na::Vec2<f32> {
+    pub fn centre(&self) -> na::Vector2<f32> {
         let mid_span = self.spans[2];
 
         let avg_y = (mid_span[0] + mid_span[1]) as f32 / 2.0;
         let avg_x = self.x as f32;
 
-        na::Vec2::new(avg_x, avg_y)
+        na::Vector2::new(avg_x, avg_y)
     }
 
     pub fn average_space_width(&self, line: &gm::Line) -> f32 {
@@ -104,25 +104,25 @@ impl StaffCross {
         self.spans.iter()
     }
 
-    pub fn span_points(&self) -> Vec<[na::Vec2<f32>; 2]> {
-        let to_vec = |span: &[usize; 2]| -> [na::Vec2<f32>; 2] {
-            let p1 = na::Vec2::new(self.x as f32 + 0.5, span[0] as f32 - 0.5);
-            let p2 = na::Vec2::new(self.x as f32 + 0.5, span[1] as f32 + 0.5);
+    pub fn span_points(&self) -> Vec<[na::Vector2<f32>; 2]> {
+        let to_vec = |span: &[usize; 2]| -> [na::Vector2<f32>; 2] {
+            let p1 = na::Vector2::new(self.x as f32 + 0.5, span[0] as f32 - 0.5);
+            let p2 = na::Vector2::new(self.x as f32 + 0.5, span[1] as f32 + 0.5);
             [p1, p2]
         };
         self.spans.iter().map(to_vec).collect()
     }
 
-    pub fn scan_direction(&self) -> na::Vec2<f32> {
-        // let p1 = na::Vec2::new(self.x as f32, self.spans[0][1] as f32 - 0.5);
-        // let p2 = na::Vec2::new(self.x as f32, self.spans[4][1] as f32 + 0.5);
+    pub fn scan_direction(&self) -> na::Vector2<f32> {
+        // let p1 = na::Vector2::new(self.x as f32, self.spans[0][1] as f32 - 0.5);
+        // let p2 = na::Vector2::new(self.x as f32, self.spans[4][1] as f32 + 0.5);
         //
         // let diff = p2 - p1;
         // let dir = na::normalize(&diff);
         //
         // dir
 
-        na::Vec2::new(0.0, 1.0)
+        na::Vector2::new(0.0, 1.0)
     }
 
     // Returns whether the sequence of spans is regular enough that it could plausibly be a

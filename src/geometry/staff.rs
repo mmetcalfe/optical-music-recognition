@@ -5,8 +5,8 @@ use geometry as gm;
 
 #[derive(Debug)]
 pub struct Staff {
-    pub pos: na::Vec2<f32>,
-    pub dir: na::Vec2<f32>,
+    pub pos: na::Vector2<f32>,
+    pub dir: na::Vector2<f32>,
     pub length: f32,
     pub line_width: f32,
     pub space_width: f32,
@@ -15,7 +15,7 @@ pub struct Staff {
 impl Staff {
 
     #[inline(never)]
-    pub fn new(a: na::Vec2<f32>, b: na::Vec2<f32>, line_width: f32, space_width: f32) -> Staff {
+    pub fn new(a: na::Vector2<f32>, b: na::Vector2<f32>, line_width: f32, space_width: f32) -> Staff {
         let dir = b - a;
         let norm_dir = na::normalize(&dir);
         let length = dir.norm();
@@ -33,17 +33,17 @@ impl Staff {
         self.line_width + self.space_width
     }
 
-    pub fn normal(&self) -> na::Vec2<f32> {
-        na::Vec2::new(self.dir[1], -self.dir[0])
+    pub fn normal(&self) -> na::Vector2<f32> {
+        na::Vector2::new(self.dir[1], -self.dir[0])
     }
 
     #[inline(never)]
-    pub fn distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
+    pub fn distance_to_point(&self, point: &na::Vector2<f32>) -> f32 {
         self.signed_distance_to_point(point).abs()
     }
 
     #[inline(never)]
-    pub fn signed_distance_to_point(&self, point: &na::Vec2<f32>) -> f32 {
+    pub fn signed_distance_to_point(&self, point: &na::Vector2<f32>) -> f32 {
         let norm = self.normal();
 
         let norm_len = 1.0;
@@ -56,11 +56,11 @@ impl Staff {
         dist
     }
 
-    pub fn point_at_time(&self, time: f32) -> na::Vec2<f32> {
+    pub fn point_at_time(&self, time: f32) -> na::Vector2<f32> {
         self.pos + self.dir * time
     }
 
-    pub fn perpendicular_samples(&self, time: f32, num_samples: usize, sample_sep: f32) -> Vec<na::Vec2<f32>>{
+    pub fn perpendicular_samples(&self, time: f32, num_samples: usize, sample_sep: f32) -> Vec<na::Vector2<f32>>{
         let mut samples = Vec::new();
 
         let p_t = self.point_at_time(time);

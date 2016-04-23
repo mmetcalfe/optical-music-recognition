@@ -47,7 +47,7 @@ impl StaffCrossLineModel {
         space_width: f32,
         line_width: f32,
         line: &gm::Line,
-        line_dir: &na::Vec2<f32>,
+        line_dir: &na::Vector2<f32>,
         pt: &StaffCross) -> bool {
 
         // Ignore if sample is not close enough to the model.

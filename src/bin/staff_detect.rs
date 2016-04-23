@@ -151,7 +151,7 @@ fn main() {
         for state in &states {
             // draw_frame.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
-            let centres : Vec<na::Vec2<f32>> = state.inliers.iter()
+            let centres : Vec<na::Vector2<f32>> = state.inliers.iter()
                 // .take(5)
                 .map(|c| c.centre()).collect();
 
@@ -290,7 +290,7 @@ fn main() {
         draw_frame.draw_string(
             &mut target,
             &time_str,
-            na::Vec2::<f32>::new(-1.0, -1.0),
+            na::Vector2::<f32>::new(-1.0, -1.0),
             0.03,
             (0.0,0.0,0.0,1.0)
         );

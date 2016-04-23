@@ -43,7 +43,7 @@ pub struct DrawingFrame<'a> {
     rect: gm::RotatedRectangle,
 
     /// Virtual pixel dimensions of the frame. This determines the frame's scale.
-    frame_dims: na::Vec2<f32>,
+    frame_dims: na::Vector2<f32>,
 }
 
 impl<'a> DrawingContext<'a> {
@@ -68,7 +68,7 @@ impl<'a> DrawingContext<'a> {
                 size: [2.0, 2.0],
                 angle: 0.0,
             },
-            frame_dims: na::Vec2::new(2.0, 2.0),
+            frame_dims: na::Vector2::new(2.0, 2.0),
         }
     }
 
@@ -84,7 +84,7 @@ impl<'a> DrawingContext<'a> {
 }
 
 impl<'a> DrawingFrame<'a> {
-    pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vec2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
+    pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vector2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
         self.ctx.borrow_mut().text_helper.draw_string(target, string, pos, scale, colour)
     }
 
@@ -137,7 +137,7 @@ impl<'a> DrawingFrame<'a> {
         self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
     }
 
-    pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
+    pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vector2<f32>, lw : f32, colour : [f32; 4]) {
         let rect = RotatedRectangle {
             position: [pt[0], pt[1]],
             size: [lw, lw],
@@ -146,7 +146,7 @@ impl<'a> DrawingFrame<'a> {
         self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, &rect, colour)
     }
 
-    pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
+    pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vector2<f32>, p2 : na::Vector2<f32>, lw : f32, colour : [f32; 4]) {
         let rect = gm::RotatedRectangle::from_line(&gm::Line::new(p1, p2), lw);
         self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, &rect, colour)
     }
@@ -157,7 +157,7 @@ impl<'a> DrawingFrame<'a> {
         self.ctx.borrow_mut().rectangle_buffer.draw_rectangles(target, &rects, colour)
     }
 
-    pub fn draw_line_extended(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
+    pub fn draw_line_extended(&self, target : &mut glium::Frame, p1 : na::Vector2<f32>, p2 : na::Vector2<f32>, lw : f32, colour : [f32; 4]) {
         let dir = na::normalize(&(p2 - p1));
         let avg = (p1 + p2) / 2.0;
 
@@ -167,9 +167,9 @@ impl<'a> DrawingFrame<'a> {
         self.draw_line(target, e1, e2, lw, colour);
     }
 
-    pub fn draw_staff_from_parts(&self, target: &mut glium::Frame, p1: na::Vec2<f32>, p2: na::Vec2<f32>, sw: f32, lw: f32, colour: [f32; 4]) {
+    pub fn draw_staff_from_parts(&self, target: &mut glium::Frame, p1: na::Vector2<f32>, p2: na::Vector2<f32>, sw: f32, lw: f32, colour: [f32; 4]) {
         let dir = na::normalize(&(p2 - p1));
-        let norm = na::Vec2::new(dir[1], -dir[0]);
+        let norm = na::Vector2::new(dir[1], -dir[0]);
 
         let line_space = lw + sw;
 

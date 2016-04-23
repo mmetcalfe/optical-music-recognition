@@ -33,7 +33,7 @@ fn least_squares_solve(a: &rgsl::MatrixF64, b: &rgsl::VectorF64) -> rgsl::Vector
     x
 }
 
-pub fn fit_line(points: &Vec<na::Vec2<f32>>) -> gm::Line {
+pub fn fit_line(points: &Vec<na::Vector2<f32>>) -> gm::Line {
     let m = points.len();
     let n = 2;
     let x = rgsl::MatrixF64::new(m, 2).unwrap();
@@ -95,7 +95,7 @@ pub fn fit_line(points: &Vec<na::Vec2<f32>>) -> gm::Line {
     // println!("beta: {:?}", beta);
     let b = beta.get(0) as f32;
     let m = beta.get(1) as f32;
-    let l0 = na::Vec2::<f32>::new(0.0, b);
-    let l1 = na::Vec2::<f32>::new(1.0, b + m);
+    let l0 = na::Vector2::<f32>::new(0.0, b);
+    let l1 = na::Vector2::<f32>::new(1.0, b + m);
     gm::Line::new(l0, l1)
 }

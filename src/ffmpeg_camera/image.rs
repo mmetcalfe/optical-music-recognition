@@ -23,12 +23,12 @@ pub trait Image : Clone {
     // fn data(&self) -> &Vec<u8>; // raw data buffer
 
     fn index(&self, col : usize, row : usize) -> Pixel;
-    // fn sample_point(&self, pt: na::Vec2<f32>) -> Pixel {
+    // fn sample_point(&self, pt: na::Vector2<f32>) -> Pixel {
     //     let col = pt[0].floor() as usize;
     //     let row = pt[1].floor() as usize;
     //     self.index(col, row)
     // }
-    fn sample_point(&self, pt: na::Vec2<f32>) -> Pixel {
+    fn sample_point(&self, pt: na::Vector2<f32>) -> Pixel {
         let raw_col = pt[0].floor() as usize;
         let raw_row = pt[1].floor() as usize;
 
@@ -45,7 +45,7 @@ pub trait Image : Clone {
          row < self.height()
     }
 
-    fn opengl_coords_for_point(&self, point: na::Vec2<f32>) -> na::Vec2<f32> {
+    fn opengl_coords_for_point(&self, point: na::Vector2<f32>) -> na::Vector2<f32> {
         let px = point[0];
         let py = point[1];
 
@@ -60,16 +60,16 @@ pub trait Image : Clone {
         // // OpenGL coordinates in [-1, 1]:
         // let rx = nx * 2.0 - 1.0;
         // let ry = ny * 2.0 - 1.0;
-        // na::Vec2::new(rx, -ry)
+        // na::Vector2::new(rx, -ry)
 
-        na::Vec2::new(px as f32, -py as f32)
+        na::Vector2::new(px as f32, -py as f32)
     }
 
-    fn opengl_coords_for_index(&self, index: [usize; 2]) -> na::Vec2<f32> {
+    fn opengl_coords_for_index(&self, index: [usize; 2]) -> na::Vector2<f32> {
         let px = index[0] as f32;
         let py = index[1] as f32;
 
-        self.opengl_coords_for_point(na::Vec2::new(px, py))
+        self.opengl_coords_for_point(na::Vector2::new(px, py))
     }
 
     fn save_pgm(&self, save_fname: &str) -> io::Result<()> {

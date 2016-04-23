@@ -27,7 +27,7 @@ impl TextHelper {
         }
     }
 
-    pub fn draw_string(&self, target : &mut glium::Frame, string: &str, pos: na::Vec2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
+    pub fn draw_string(&self, target : &mut glium::Frame, string: &str, pos: na::Vector2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
         let text_display = glium_text::TextDisplay::new(
             &self.text_system,
             &self.font_texture,

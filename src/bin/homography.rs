@@ -162,7 +162,7 @@ fn main() {
                         let x = xpos[i];
                         let y = ypos[i];
                         // println!("Feature {}: {:?}.", i, (x, y));
-                        let pt = na::Vec2::new(x, y);
+                        let pt = na::Vector2::new(x, y);
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
                         draw_frame.draw_point(&mut target, draw_pt, 5.0, [1.0, 0.2, 0.2, 1.0]);
                     }
@@ -186,7 +186,7 @@ fn main() {
         draw_frame.draw_string(
             &mut target,
             &time_str,
-            na::Vec2::<f32>::new(-1.0, -1.0),
+            na::Vector2::<f32>::new(-1.0, -1.0),
             0.03,
             (0.0,0.0,0.0,1.0)
         );
