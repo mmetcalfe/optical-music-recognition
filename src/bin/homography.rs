@@ -15,7 +15,6 @@ use omr::ffmpeg_camera::image::Image;
 use omr::ffmpeg_camera::image_ycbcr;
 use omr::drawing;
 use omr::math;
-use omr::geometry;
 use omr::geometry as gm;
 use omr::detection::ransac::staff_cross::StaffCrossLineModel;
 use omr::detection::scanning::staff_cross::StaffCross;
@@ -85,8 +84,21 @@ fn main() {
     println!("Create drawing context:");
     let mut draw_ctx = RefCell::new(drawing::context::DrawingContext::new(&display));
     draw_ctx.borrow_mut().set_window_dims(window_dims);
-    let mut draw_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
-    draw_frame.set_view_matrices();
+    let mut window_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+
+    let mut photo_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    photo_frame.rect = gm::RotatedRectangle {
+        position: [0.5, 0.5],
+        size: [1.0, 1.0],
+        angle: 0.0,
+    };
+
+    let mut video_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    video_frame.rect = gm::RotatedRectangle {
+        position: [-0.5, 0.5],
+        size: [1.0, 1.0],
+        angle: 0.0,
+    };
 
     let mut frame_start_time = SteadyTime::now();
 
@@ -114,12 +126,11 @@ fn main() {
             ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
         }
 
-
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
-        // draw_frame.draw_image_ycbcr(&mut target, &ycbcr_frame);
+        video_frame.draw_image_ycbcr(&mut target, &ycbcr_frame);
         if let Some(ref frame) = captured_frame {
-            draw_frame.draw_image_ycbcr(&mut target, &frame);
+            photo_frame.draw_image_ycbcr(&mut target, &frame);
         }
 
         // Begin ORB detection:
@@ -164,7 +175,7 @@ fn main() {
                         // println!("Feature {}: {:?}.", i, (x, y));
                         let pt = na::Vector2::new(x, y);
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
-                        draw_frame.draw_point(&mut target, draw_pt, 5.0, [1.0, 0.2, 0.2, 1.0]);
+                        video_frame.draw_point(&mut target, draw_pt, 5.0, [1.0, 0.2, 0.2, 1.0]);
                     }
                     println!("End printing scope.");
                 } else {
@@ -183,7 +194,7 @@ fn main() {
         let mspf = frame_duration.num_milliseconds();
         let fps = 1000.0 / (mspf as f32);
         let time_str = format!("{} ms/frame, {} fps", mspf, fps);
-        draw_frame.draw_string(
+        window_frame.draw_string(
             &mut target,
             &time_str,
             na::Vector2::<f32>::new(-1.0, -1.0),

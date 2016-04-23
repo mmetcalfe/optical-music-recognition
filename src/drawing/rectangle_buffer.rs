@@ -64,7 +64,7 @@ impl RectangleBuffer {
     }
 
     pub fn new(display: glium::Display) -> RectangleBuffer {
-        let v = 0.5;
+        let v = 1.0;
         let vertex1 = Vertex { vertex_pos: [-v, -v] };
         let vertex2 = Vertex { vertex_pos: [ v, -v] };
         let vertex3 = Vertex { vertex_pos: [-v, v] };
@@ -103,8 +103,8 @@ impl RectangleBuffer {
 
             uniform mat4 view;
             void main() {
-                float xs = size.x;
-                float ys = size.y;
+                float xs = size.x / 2.0;
+                float ys = size.y / 2.0;
 
                 float c = cos(angle);
                 float s = sin(angle);

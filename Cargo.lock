@@ -31,7 +31,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "arrayfire"
 version = "3.3.0"
-source = "git+file:///Users/mitchell/code/arrayfire-rust?branch=devel#0961834f654ae844dee4ba7845af49ee175afbff"
+source = "git+file:///Users/mitchell/code/arrayfire-rust?branch=devel#07cffcef4763dacea4863fffb2feb44e87b908de"
 dependencies = [
  "libc 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",

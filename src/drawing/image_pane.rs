@@ -66,7 +66,13 @@ impl<'a> ImagePane<'a> {
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32],
             ],
-            view: self.view_matrix,
+            // view: self.view_matrix,
+            view: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32],
+            ],
             tex: texture,
         };
         target.draw(

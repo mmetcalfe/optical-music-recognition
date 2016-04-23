@@ -36,8 +36,8 @@ impl RotatedRectangle {
         let x = self.position[0];
         let y = self.position[1];
         let angle = self.angle;
-        let xs = self.size[0];
-        let ys = self.size[1];
+        let xs = self.size[0] / 2.0;
+        let ys = self.size[1] / 2.0;
 
         let c = angle.cos();
         let s = angle.sin();

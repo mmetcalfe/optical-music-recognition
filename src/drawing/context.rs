@@ -40,10 +40,10 @@ pub struct DrawingFrame<'a> {
     ctx: &'a RefCell<DrawingContext<'a>>,
 
     /// Position and size of the frame within the base frame.
-    rect: gm::RotatedRectangle,
+    pub rect: gm::RotatedRectangle,
 
     /// Virtual pixel dimensions of the frame. This determines the frame's scale.
-    frame_dims: na::Vector2<f32>,
+    pub frame_dims: na::Vector2<f32>,
 }
 
 impl<'a> DrawingContext<'a> {
@@ -85,16 +85,12 @@ impl<'a> DrawingContext<'a> {
 
 impl<'a> DrawingFrame<'a> {
     pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vector2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
+        self.set_view_matrices();
         self.ctx.borrow_mut().text_helper.draw_string(target, string, pos, scale, colour)
     }
 
-    pub fn set_view_matrices(&mut self) {
+    pub fn set_view_matrices(&self) {
         let mut ctx = self.ctx.borrow_mut();
-
-        // let aspect = (width as f32) / (height as f32);
-
-        // let hw = width as f32 / 2.0;
-        // let hh = height as f32 / 2.0;
 
         // xo, yo = (0, 0)
         // w, h = framebufferSize
@@ -117,27 +113,31 @@ impl<'a> DrawingFrame<'a> {
             [-1.0, 1.0, 0.0, 1.0f32],
         ];
 
-        // let frame_mat = na::Mat4::<f32>::from(&frame_transform);
-        // let scale_mat = na::Mat4::<f32>::from(&scale_transform);
-        // let trans_mat = frame_mat.mul(scale_mat);
+        let frame_mat = na::Matrix4::<f32>::from(&frame_transform);
+        let scale_mat = na::Matrix4::<f32>::from(&scale_transform);
+        let trans_mat = frame_mat.mul(scale_mat);
 
-        // ctx.rectangle_buffer.set_view_matrix(trans_mat.as_ref());
-        ctx.rectangle_buffer.set_view_matrix(&scale_transform);
+        ctx.rectangle_buffer.set_view_matrix(trans_mat.as_ref());
+        ctx.image_pane.set_view_matrix(frame_mat.as_ref());
     }
 
     pub fn draw_rectangle(&self, target : &mut glium::Frame, rect : &RotatedRectangle, colour : [f32; 4]) {
+        self.set_view_matrices();
         self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, rect, colour)
     }
 
     pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
+        self.set_view_matrices();
         self.ctx.borrow_mut().image_pane.draw_image_uyvy(target, image)
     }
 
     pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
+        self.set_view_matrices();
         self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
     }
 
     pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vector2<f32>, lw : f32, colour : [f32; 4]) {
+        self.set_view_matrices();
         let rect = RotatedRectangle {
             position: [pt[0], pt[1]],
             size: [lw, lw],
@@ -147,11 +147,13 @@ impl<'a> DrawingFrame<'a> {
     }
 
     pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vector2<f32>, p2 : na::Vector2<f32>, lw : f32, colour : [f32; 4]) {
+        self.set_view_matrices();
         let rect = gm::RotatedRectangle::from_line(&gm::Line::new(p1, p2), lw);
         self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, &rect, colour)
     }
 
     pub fn draw_lines(&self, target : &mut glium::Frame, lines: &[gm::Line], lw : f32, colour : [f32; 4]) {
+        self.set_view_matrices();
         let rects : Vec<_> = lines.iter().map(|l| gm::RotatedRectangle::from_line(&l, lw)).collect();
 
         self.ctx.borrow_mut().rectangle_buffer.draw_rectangles(target, &rects, colour)
@@ -168,6 +170,7 @@ impl<'a> DrawingFrame<'a> {
     }
 
     pub fn draw_staff_from_parts(&self, target: &mut glium::Frame, p1: na::Vector2<f32>, p2: na::Vector2<f32>, sw: f32, lw: f32, colour: [f32; 4]) {
+        self.set_view_matrices();
         let dir = na::normalize(&(p2 - p1));
         let norm = na::Vector2::new(dir[1], -dir[0]);
 
@@ -188,6 +191,7 @@ impl<'a> DrawingFrame<'a> {
     }
 
     pub fn draw_staff_in_image(&self, target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, staff: &gm::staff::Staff, colour: [f32; 4]) {
+        self.set_view_matrices();
         let start_pt = staff.point_at_time(0.0);
         let end_pt = staff.point_at_time(staff.length);
         let p1 = ycbcr_frame.opengl_coords_for_point(start_pt);
@@ -203,6 +207,7 @@ impl<'a> DrawingFrame<'a> {
     }
 
     pub fn draw_staff_cross(&self, mut target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, cross: &StaffCross, colour: [f32; 4]) {
+        self.set_view_matrices();
         let pix_h = 1.0; // 2.0 * (1.0 / ycbcr_frame.height as f32);
         let scan_draw_cols = 1.0;
 
@@ -226,6 +231,7 @@ impl<'a> DrawingFrame<'a> {
     }
 
     pub fn draw_staff_crosses(&self, mut target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, crosses: &[StaffCross], colour: [f32; 4]) {
+        self.set_view_matrices();
         let pix_h = 1.0;
         let lw = 1.0;
 
@@ -258,6 +264,7 @@ impl<'a> DrawingFrame<'a> {
         mut target: &mut glium::Frame,
         ycbcr_frame : &image_ycbcr::Image,
         state: &RansacState<StaffCrossLine, StaffCross>) {
+            self.set_view_matrices();
 
         if let Some(ref line) = state.model {
             let line = gm::Line::new(line.a.centre(), line.b.centre());
