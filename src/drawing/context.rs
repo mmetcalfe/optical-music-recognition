@@ -12,6 +12,8 @@ use ffmpeg_camera::image_ycbcr;
 use ffmpeg_camera::image::Image;
 use glium;
 use nalgebra as na;
+use nalgebra::Transpose;
+use nalgebra::Inverse;
 
 use detection::scanning::staff_cross::StaffCross;
 use detection::ransac::staff_cross::StaffCrossLine;
@@ -84,14 +86,42 @@ impl<'a> DrawingContext<'a> {
 }
 
 impl<'a> DrawingFrame<'a> {
+
+    fn make_scale_transform(&self) -> [[f32; 4]; 4] {
+        // let (width, height) = self.frame_dims;
+        let xs = 2.0 / self.frame_dims[0];
+        let ys = 2.0 / self.frame_dims[1];
+        let scale_transform = [
+            [xs, 0.0, 0.0, 0.0],
+            [0.0, -ys, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0, 1.0f32],
+        ];
+
+        scale_transform
+    }
+
+    pub fn local_to_parent(&self, point: &na::Vector2<f32>) -> na::Vector2<f32> {
+        let frame_transform = self.rect.get_transform();
+        let scale_transform = self.make_scale_transform();
+
+        let frame_mat = na::Matrix4::<f32>::from(&frame_transform);
+        let scale_mat = na::Matrix4::<f32>::from(&scale_transform);
+        let trans_mat = frame_mat.mul(scale_mat);
+
+        let point_4 = na::Vector4::<f32>::new(point[0], point[1], 0.0, 1.0);
+
+        let trans_4 = trans_mat.mul(point_4);
+
+        na::Vector2::<f32>::new(1.0 + trans_4[0], 1.0 - trans_4[1])
+    }
+
     pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vector2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
         self.set_view_matrices();
         self.ctx.borrow_mut().text_helper.draw_string(target, string, pos, scale, colour)
     }
 
     pub fn set_view_matrices(&self) {
-        let mut ctx = self.ctx.borrow_mut();
-
         // xo, yo = (0, 0)
         // w, h = framebufferSize
         // vpMat = np.matrix([
@@ -102,21 +132,13 @@ impl<'a> DrawingFrame<'a> {
         // ], np.float32)
 
         let frame_transform = self.rect.get_transform();
-
-        let (width, height) = ctx.window_dims;
-        let xs = 2.0 / width as f32;
-        let ys = 2.0 / height as f32;
-        let scale_transform = [
-            [xs, 0.0, 0.0, 0.0],
-            [0.0, ys, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [-1.0, 1.0, 0.0, 1.0f32],
-        ];
+        let scale_transform = self.make_scale_transform();
 
         let frame_mat = na::Matrix4::<f32>::from(&frame_transform);
         let scale_mat = na::Matrix4::<f32>::from(&scale_transform);
         let trans_mat = frame_mat.mul(scale_mat);
 
+        let mut ctx = self.ctx.borrow_mut();
         ctx.rectangle_buffer.set_view_matrix(trans_mat.as_ref());
         ctx.image_pane.set_view_matrix(frame_mat.as_ref());
     }

@@ -62,7 +62,8 @@ pub trait Image : Clone {
         // let ry = ny * 2.0 - 1.0;
         // na::Vector2::new(rx, -ry)
 
-        na::Vector2::new(px as f32, -py as f32)
+        // na::Vector2::new(px as f32, -py as f32)
+        na::Vector2::new(px as f32, py as f32)
     }
 
     fn opengl_coords_for_index(&self, index: [usize; 2]) -> na::Vector2<f32> {
