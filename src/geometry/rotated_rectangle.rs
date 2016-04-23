@@ -31,4 +31,28 @@ impl RotatedRectangle {
 
         rect
     }
+
+    pub fn get_transform(&self) -> [[f32; 4]; 4] {
+        let x = self.position[0];
+        let y = self.position[1];
+        let angle = self.angle;
+        let xs = self.size[0];
+        let ys = self.size[1];
+
+        let c = angle.cos();
+        let s = angle.sin();
+        let r11 = c;
+        let r12 = -s;
+        let r21 = s;
+        let r22 = c;
+        // let xr = r11*x + r12*y;
+        // let yr = r21*x + r22*y;
+
+        [
+            [xs*r11, xs*r12, 0.0, 0.0],
+            [ys*r21, ys*r22, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [x, y, 0.0, 1.0f32],
+        ]
+    }
 }

@@ -28,6 +28,8 @@ use std::cmp;
 use time::Duration;
 use time::SteadyTime;
 
+use std::cell::RefCell;
+
 fn get_fake_webcam_frame() -> image_ycbcr::Image {
     // Fake webcam frame:
     println!("Fake image:");
@@ -81,9 +83,10 @@ fn main() {
         .unwrap();
 
     println!("Create drawing context:");
-    let mut draw_ctx = drawing::context::DrawingContext::new(&display);
-    draw_ctx.set_window_dims(window_dims);
-    draw_ctx.set_view_matrices_for_image_dimensions(img_w, img_h);
+    let mut draw_ctx = RefCell::new(drawing::context::DrawingContext::new(&display));
+    draw_ctx.borrow_mut().set_window_dims(window_dims);
+    let mut draw_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    draw_frame.set_view_matrices();
 
     let mut frame_start_time = SteadyTime::now();
 
@@ -95,7 +98,7 @@ fn main() {
         // Get webcam frame:
         let webcam_frame = camera.get_image_uyvy().unwrap();
         // webcam_frame.save_jpeg("image_uyvy.jpg").unwrap();
-        let ycbcr_frame = draw_ctx.convert_uyvy_ycbcr(&webcam_frame).unwrap();
+        let ycbcr_frame = draw_ctx.borrow_mut().convert_uyvy_ycbcr(&webcam_frame).unwrap();
         // // Fake webcam frame:
         // let ycbcr_frame = get_fake_webcam_frame();
 
@@ -114,9 +117,9 @@ fn main() {
 
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
-        // draw_ctx.draw_image_ycbcr(&mut target, &ycbcr_frame);
+        // draw_frame.draw_image_ycbcr(&mut target, &ycbcr_frame);
         if let Some(ref frame) = captured_frame {
-            draw_ctx.draw_image_ycbcr(&mut target, &frame);
+            draw_frame.draw_image_ycbcr(&mut target, &frame);
         }
 
         // Begin ORB detection:
@@ -149,6 +152,7 @@ fn main() {
                 println!("num_features: {:?}", num_features);
                 if num_features > 0 {
                     let af_xpos = orb_features.xpos().unwrap();
+                    println!("xpos host_to_vec:");
                     let xpos = omr::utility::af_util::host_to_vec(&af_xpos);
 
                     let af_ypos = orb_features.ypos().unwrap();
@@ -160,7 +164,7 @@ fn main() {
                         // println!("Feature {}: {:?}.", i, (x, y));
                         let pt = na::Vec2::new(x, y);
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
-                        draw_ctx.draw_point(&mut target, draw_pt, 5.0, [1.0, 0.2, 0.2, 1.0]);
+                        draw_frame.draw_point(&mut target, draw_pt, 5.0, [1.0, 0.2, 0.2, 1.0]);
                     }
                     println!("End printing scope.");
                 } else {
@@ -179,7 +183,7 @@ fn main() {
         let mspf = frame_duration.num_milliseconds();
         let fps = 1000.0 / (mspf as f32);
         let time_str = format!("{} ms/frame, {} fps", mspf, fps);
-        draw_ctx.draw_string(
+        draw_frame.draw_string(
             &mut target,
             &time_str,
             na::Vec2::<f32>::new(-1.0, -1.0),

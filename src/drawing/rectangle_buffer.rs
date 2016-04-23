@@ -27,28 +27,8 @@ impl RectangleBuffer {
     }
 
     pub fn draw_rectangle(&self, target : &mut glium::Frame, rect : &RotatedRectangle, colour : [f32; 4]) {
-        let x = rect.position[0];
-        let y = rect.position[1];
-        let angle = rect.angle;
-        let xs = rect.size[0];
-        let ys = rect.size[1];
-
-        let c = angle.cos();
-        let s = angle.sin();
-        let r11 = c;
-        let r12 = -s;
-        let r21 = s;
-        let r22 = c;
-        // let xr = r11*x + r12*y;
-        // let yr = r21*x + r22*y;
-
         let uniforms = uniform! {
-            model: [
-                [xs*r11, xs*r12, 0.0, 0.0],
-                [ys*r21, ys*r22, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [x, y, 0.0, 1.0f32],
-            ],
+            model: rect.get_transform(),
             view: self.view_matrix,
             line_col: colour,
         };

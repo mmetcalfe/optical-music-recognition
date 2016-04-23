@@ -24,6 +24,8 @@ use std::cmp;
 use time::Duration;
 use time::SteadyTime;
 
+use std::cell::RefCell;
+
 fn main() {
     // let mut camera =
     //     ffmpeg_camera::FfmpegCamera::get_default()
@@ -51,8 +53,17 @@ fn main() {
     // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
     // let texture = glium::texture::Texture2d::new(&display, image).unwrap();
 
-    let mut draw_ctx = drawing::context::DrawingContext::new(&display);
-    draw_ctx.set_view_matrices_for_image_dimensions(img_w, img_h);
+    // let mut draw_ctx = drawing::context::DrawingContext::new(&display);
+    // draw_ctx.set_view_matrices(img_w, img_h);
+    // let mut draw_ctx = drawing::context::DrawingContext::new(&display);
+    // draw_ctx.set_window_dims((img_w, img_h));
+    // let mut draw_frame = draw_ctx.get_default_frame();
+    let window_dims = (img_w, img_h);
+    let mut draw_ctx = RefCell::new(drawing::context::DrawingContext::new(&display));
+    draw_ctx.borrow_mut().set_window_dims(window_dims);
+    let mut draw_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    draw_frame.set_view_matrices();
+
 
     // let img_pane = drawing::image_pane::ImagePane::new(&display);
     // let rect_buff = drawing::rectangle_buffer::RectangleBuffer::new(&display);
@@ -66,15 +77,15 @@ fn main() {
         // webcam_frame.save_pgm("image.pgm").unwrap();
         // webcam_frame.save_jpeg("image_yuv422.jpg").unwrap();
 
-        let ycbcr_frame = draw_ctx.convert_preprocess_uyvy_ycbcr(&webcam_frame).unwrap();
+        let ycbcr_frame = draw_ctx.borrow_mut().convert_preprocess_uyvy_ycbcr(&webcam_frame).unwrap();
 
         // ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
 
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        // draw_ctx.draw_image_uyvy(&mut target, &webcam_frame);
-        draw_ctx.draw_image_ycbcr(&mut target, &ycbcr_frame);
+        // draw_frame.draw_image_uyvy(&mut target, &webcam_frame);
+        draw_frame.draw_image_ycbcr(&mut target, &ycbcr_frame);
 
         let staff_cross_col = [0.6, 0.2, 0.0, 1.0];
 
@@ -86,9 +97,9 @@ fn main() {
 
         // Draw detected StaffCross points:
         // for cross in &cross_points {
-        //     draw_ctx.draw_staff_cross(&mut target, &ycbcr_frame, &cross, staff_cross_col);
+        //     draw_frame.draw_staff_cross(&mut target, &ycbcr_frame, &cross, staff_cross_col);
         // }
-        draw_ctx.draw_staff_crosses(&mut target, &ycbcr_frame, &cross_points, staff_cross_col);
+        draw_frame.draw_staff_crosses(&mut target, &ycbcr_frame, &cross_points, staff_cross_col);
 
 
         // // Draw segments:
@@ -113,8 +124,8 @@ fn main() {
         //         p2[1] += pix_h / 2.0;
         //     }
         //
-        //     // draw_ctx.draw_line(&mut target, p1, p2, pix_h * 5.0, col);
-        //     draw_ctx.draw_line(&mut target, p1, p2, pix_h, col);
+        //     // draw_frame.draw_line(&mut target, p1, p2, pix_h * 5.0, col);
+        //     draw_frame.draw_line(&mut target, p1, p2, pix_h, col);
         // }
 
         let num_iterations = omr::detection::ransac::calculate_num_iterations(
@@ -134,11 +145,11 @@ fn main() {
         };
         // let maybe_line = omr::detection::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
         // let state = omr::detection::ransac::ransac::<StaffCrossLineModel,_,_>(&params, &cross_points);
-        // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
+        // draw_frame.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
         let states = omr::detection::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
         for state in &states {
-            // draw_ctx.draw_ransac_state(&mut target, &ycbcr_frame, &state);
+            // draw_frame.draw_ransac_state(&mut target, &ycbcr_frame, &state);
 
             let centres : Vec<na::Vec2<f32>> = state.inliers.iter()
                 // .take(5)
@@ -147,7 +158,7 @@ fn main() {
             let best_line = math::fit_line(&centres);
             let p1 = ycbcr_frame.opengl_coords_for_point(best_line.a);
             let p2 = ycbcr_frame.opengl_coords_for_point(best_line.b);
-            // draw_ctx.draw_line_extended(&mut target, p1, p2, 3.0, [0.3, 0.3, 0.1, 1.0]);
+            // draw_frame.draw_line_extended(&mut target, p1, p2, 3.0, [0.3, 0.3, 0.1, 1.0]);
 
             let mut is_staff = false;
             if let Some(ref detected_line) = state.model {
@@ -160,8 +171,8 @@ fn main() {
                 let (t_min, t_max) = best_line.screen_entry_exit_times(ycbcr_frame.width as f32, ycbcr_frame.height as f32);
                 // let p_min = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_min));
                 // let p_max = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_max));
-                // draw_ctx.draw_line(&mut target, p_min, p_min*0.9+p_max*0.1, 10.0, [1.0, 1.0, 0.5, 1.0]);
-                // draw_ctx.draw_line(&mut target, p_max, p_min*0.1+p_max*0.9, 10.0, [1.0, 1.0, 0.5, 1.0]);
+                // draw_frame.draw_line(&mut target, p_min, p_min*0.9+p_max*0.1, 10.0, [1.0, 1.0, 0.5, 1.0]);
+                // draw_frame.draw_line(&mut target, p_max, p_min*0.1+p_max*0.9, 10.0, [1.0, 1.0, 0.5, 1.0]);
 
                 let normal = best_line.normal();
 
@@ -193,7 +204,7 @@ fn main() {
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
 
                         let colour = if brightness > 0.5 {[0.0, 0.5, 0.0, 1.0]} else {[0.0, 0.0, 0.5, 1.0]};
-                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, colour);
+                        // draw_frame.draw_point(&mut target, draw_pt, 1.0, colour);
                     }
                     line_avg /= 5.0;
 
@@ -204,7 +215,7 @@ fn main() {
                         space_avg += brightness.round();
 
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
-                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, [0.8, 0.0, 1.0, 1.0]);
+                        // draw_frame.draw_point(&mut target, draw_pt, 1.0, [0.8, 0.0, 1.0, 1.0]);
                     }
                     space_avg /= 4.0;
 
@@ -216,7 +227,7 @@ fn main() {
                         let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
                         blank_avg += brightness.round();
                         let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
-                        // draw_ctx.draw_point(&mut target, draw_pt, 1.0, [0.2, 0.2, 0.2, 1.0]);
+                        // draw_frame.draw_point(&mut target, draw_pt, 1.0, [0.2, 0.2, 0.2, 1.0]);
                     }
                     blank_avg /= num_samples as f32;
 
@@ -227,22 +238,22 @@ fn main() {
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
 
                     if class == omr::detection::refinement::StaffEvidenceClass::Blank {
-                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
+                        // draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
                     }
                     if class == omr::detection::refinement::StaffEvidenceClass::Strong {
-                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.3, 0.0, 1.0]);
+                        // draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.3, 0.0, 1.0]);
                     }
                     if class == omr::detection::refinement::StaffEvidenceClass::Partial {
-                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.8, 0.0, 1.0]);
+                        // draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 0.8, 0.0, 1.0]);
                     }
                     if class == omr::detection::refinement::StaffEvidenceClass::Weak {
-                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.3, 0.6, 0.0, 1.0]);
+                        // draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.3, 0.6, 0.0, 1.0]);
                     }
                     if class == omr::detection::refinement::StaffEvidenceClass::Negative {
-                        // draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 1.0, 1.0]);
+                        // draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 1.0, 1.0]);
                     }
                     // if class == omr::detection::refinement::StaffEvidenceClass::None {
-                    //     draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.5, 1.0, 1.0]);
+                    //     draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.5, 1.0, 1.0]);
                     // }
                 }
 
@@ -252,20 +263,20 @@ fn main() {
                     let staff_pt2 = part.point_at_time(part.length);
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
-                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 1.0, 1.0, 1.0]);
+                    draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 1.0, 1.0, 1.0]);
                 }
                 for part in blank_segments {
                     let staff_pt1 = part.point_at_time(0.0);
                     let staff_pt2 = part.point_at_time(part.length);
                     let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
                     let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
-                    draw_ctx.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
+                    draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
                 }
 
                 let staff_segments = candidate_segments.iter()
                     .filter(|segment| omr::detection::refinement::staff_segment_is_valid(&ycbcr_frame, &segment));
                 for segment in staff_segments {
-                    draw_ctx.draw_staff_in_image(&mut target, &ycbcr_frame, &segment, [0.8, 0.3, 1.0, 1.0]);
+                    draw_frame.draw_staff_in_image(&mut target, &ycbcr_frame, &segment, [0.8, 0.3, 1.0, 1.0]);
                 }
             }
         }
@@ -276,7 +287,7 @@ fn main() {
         let mspf = frame_duration.num_milliseconds();
         let fps = 1000.0 / (mspf as f32);
         let time_str = format!("{} ms/frame, {} fps", mspf, fps);
-        draw_ctx.draw_string(
+        draw_frame.draw_string(
             &mut target,
             &time_str,
             na::Vec2::<f32>::new(-1.0, -1.0),

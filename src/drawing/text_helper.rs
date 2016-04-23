@@ -3,6 +3,9 @@ use glium_text;
 use std;
 use nalgebra as na;
 
+use glium::DisplayBuild;
+use glium::Surface;
+
 pub struct TextHelper {
     text_system: glium_text::TextSystem,
     font_texture: glium_text::FontTexture,

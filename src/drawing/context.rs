@@ -1,3 +1,6 @@
+extern crate core;
+
+use std::cell::RefCell;
 
 use drawing::rectangle_buffer::RectangleBuffer;
 use geometry::RotatedRectangle;
@@ -15,9 +18,14 @@ use detection::ransac::staff_cross::StaffCrossLine;
 use detection::ransac::RansacState;
 use geometry as gm;
 
+use utility;
+
+use self::core::ops::Mul;
+use self::core::convert::From;
+
 // use std::f32;
 
-// Manages all drawing operations:
+/// Manages all drawing operations.
 pub struct DrawingContext<'a> {
     image_pane : ImagePane<'a>,
     rectangle_buffer : RectangleBuffer,
@@ -25,11 +33,18 @@ pub struct DrawingContext<'a> {
     window_dims: (usize, usize),
 }
 
-// // Provides a coordinate system in which to draw:
-// pub struct DrawingFrame<'a> {
-//     ctx: &'a DrawingContext,
-//     rect: gm::RotatedRectangle,
-// }
+/// Provides a coordinate system in which to draw.
+pub struct DrawingFrame<'a> {
+    /// Context to use for drawing.
+    // ctx: &'a mut DrawingContext<'a>,
+    ctx: &'a RefCell<DrawingContext<'a>>,
+
+    /// Position and size of the frame within the base frame.
+    rect: gm::RotatedRectangle,
+
+    /// Virtual pixel dimensions of the frame. This determines the frame's scale.
+    frame_dims: na::Vec2<f32>,
+}
 
 impl<'a> DrawingContext<'a> {
     pub fn new(display : &glium::Display) -> DrawingContext {
@@ -45,13 +60,37 @@ impl<'a> DrawingContext<'a> {
         self.window_dims = dims;
     }
 
-    pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vec2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
-        self.text_helper.draw_string(target, string, pos, scale, colour)
+    pub fn get_default_frame(self_: &'a RefCell<Self>) -> DrawingFrame<'a> {
+        DrawingFrame::<'a> {
+            ctx: self_,
+            rect: gm::RotatedRectangle {
+                position: [0.0, 0.0],
+                size: [2.0, 2.0],
+                angle: 0.0,
+            },
+            frame_dims: na::Vec2::new(2.0, 2.0),
+        }
     }
 
-    pub fn set_view_matrices_for_image_dimensions(&mut self, width: usize, height: usize) {
-        let xs = 2.0 / width as f32;
-        let ys = 2.0 / height as f32;
+    pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        self.image_pane.convert_uyvy_ycbcr(uyvy_image)
+    }
+
+    pub fn convert_preprocess_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        self.image_pane.convert_preprocess_uyvy_ycbcr(uyvy_image)
+    }
+}
+
+impl<'a> DrawingFrame<'a> {
+    pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vec2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
+        self.ctx.borrow_mut().text_helper.draw_string(target, string, pos, scale, colour)
+    }
+
+    pub fn set_view_matrices(&mut self) {
+        let mut ctx = self.ctx.borrow_mut();
+
         // let aspect = (width as f32) / (height as f32);
 
         // let hw = width as f32 / 2.0;
@@ -66,27 +105,36 @@ impl<'a> DrawingContext<'a> {
         // [0, 0, 0, 1]
         // ], np.float32)
 
-        let matrix = [
+        let frame_transform = self.rect.get_transform();
+
+        let (width, height) = ctx.window_dims;
+        let xs = 2.0 / width as f32;
+        let ys = 2.0 / height as f32;
+        let scale_transform = [
             [xs, 0.0, 0.0, 0.0],
             [0.0, ys, 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
             [-1.0, 1.0, 0.0, 1.0f32],
         ];
 
-        // self.image_pane.set_view_matrix(&matrix);
-        self.rectangle_buffer.set_view_matrix(&matrix);
+        // let frame_mat = na::Mat4::<f32>::from(&frame_transform);
+        // let scale_mat = na::Mat4::<f32>::from(&scale_transform);
+        // let trans_mat = frame_mat.mul(scale_mat);
+
+        // ctx.rectangle_buffer.set_view_matrix(trans_mat.as_ref());
+        ctx.rectangle_buffer.set_view_matrix(&scale_transform);
     }
 
     pub fn draw_rectangle(&self, target : &mut glium::Frame, rect : &RotatedRectangle, colour : [f32; 4]) {
-        self.rectangle_buffer.draw_rectangle(target, rect, colour)
+        self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, rect, colour)
     }
 
     pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
-        self.image_pane.draw_image_uyvy(target, image)
+        self.ctx.borrow_mut().image_pane.draw_image_uyvy(target, image)
     }
 
     pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
-        self.image_pane.draw_image_ycbcr(target, image)
+        self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
     }
 
     pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
@@ -95,18 +143,18 @@ impl<'a> DrawingContext<'a> {
             size: [lw, lw],
             angle: 0.0,
         };
-        self.rectangle_buffer.draw_rectangle(target, &rect, colour)
+        self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, &rect, colour)
     }
 
     pub fn draw_line(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
         let rect = gm::RotatedRectangle::from_line(&gm::Line::new(p1, p2), lw);
-        self.rectangle_buffer.draw_rectangle(target, &rect, colour)
+        self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, &rect, colour)
     }
 
     pub fn draw_lines(&self, target : &mut glium::Frame, lines: &[gm::Line], lw : f32, colour : [f32; 4]) {
         let rects : Vec<_> = lines.iter().map(|l| gm::RotatedRectangle::from_line(&l, lw)).collect();
 
-        self.rectangle_buffer.draw_rectangles(target, &rects, colour)
+        self.ctx.borrow_mut().rectangle_buffer.draw_rectangles(target, &rects, colour)
     }
 
     pub fn draw_line_extended(&self, target : &mut glium::Frame, p1 : na::Vec2<f32>, p2 : na::Vec2<f32>, lw : f32, colour : [f32; 4]) {
@@ -255,15 +303,4 @@ impl<'a> DrawingContext<'a> {
             self.draw_line(&mut target, p1, p2, lw, col);
         }
     }
-
-    pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
-        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
-        self.image_pane.convert_uyvy_ycbcr(uyvy_image)
-    }
-
-    pub fn convert_preprocess_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
-        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
-        self.image_pane.convert_preprocess_uyvy_ycbcr(uyvy_image)
-    }
-
 }
