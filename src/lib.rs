@@ -4,6 +4,7 @@ extern crate glium_text;
 extern crate nalgebra;
 extern crate rand;
 extern crate rgsl;
+extern crate arrayfire;
 
 pub mod ffmpeg_camera;
 pub mod drawing;

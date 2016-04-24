@@ -95,6 +95,57 @@ fn draw_orb_features<I: Image>(
     }
 }
 
+fn draw_feature_correspondences(
+    target: &mut glium::Frame,
+    window_frame: &omr::drawing::context::DrawingFrame,
+    train_frame: &omr::drawing::context::DrawingFrame,
+    query_frame: &omr::drawing::context::DrawingFrame,
+    train_features: &af::Features,
+    query_features: &af::Features,
+    train_indices: &af::Array,
+) {
+    let num_query_features = query_features.num_features().unwrap() as usize;
+
+    // Get feature positons:
+    let af_train_xpos = train_features.xpos().unwrap();
+    let af_train_ypos = train_features.ypos().unwrap();
+
+    // Create an indexer using the matching result:
+    let mut idxrs_x = af::Indexer::new().unwrap();
+    idxrs_x.set_index(train_indices, 0, None);
+    let mut idxrs_y = af::Indexer::new().unwrap();
+    idxrs_y.set_index(train_indices, 0, None);
+
+    // Lookup matching feature positions:
+    // let m_f_xpos = f_xpos[&indices];
+    let af_m_train_xpos = af::index_gen(&af_train_xpos, idxrs_x).unwrap();
+    let af_m_train_ypos = af::index_gen(&af_train_ypos, idxrs_y).unwrap();
+
+    let af_query_xpos = query_features.xpos().unwrap();
+    let af_query_ypos = query_features.ypos().unwrap();
+
+    let query_xpos = omr::utility::af_util::host_to_vec_f32(&af_query_xpos);
+    let query_ypos = omr::utility::af_util::host_to_vec_f32(&af_query_ypos);
+    let m_train_xpos = omr::utility::af_util::host_to_vec_f32(&af_m_train_xpos);
+    let m_train_ypos = omr::utility::af_util::host_to_vec_f32(&af_m_train_ypos);
+
+    for i in 0..num_query_features {
+        let local_photo_point = na::Vector2::<f32>::new(m_train_xpos[i], m_train_ypos[i]);
+        let local_video_point = na::Vector2::<f32>::new(query_xpos[i], query_ypos[i]);
+
+        let photo_point = train_frame.local_to_parent(&local_photo_point);
+        let video_point = query_frame.local_to_parent(&local_video_point);
+
+        window_frame.draw_line(
+            target,
+            photo_point,
+            video_point,
+            0.01,
+            [1.0, 1.0, 1.0, 1.0]
+        );
+    }
+}
+
 fn main() {
     // af::set_device(0);
     // af::info();
@@ -227,8 +278,15 @@ fn main() {
                         );
                         let (af_indices, af_dists) = match_result.unwrap();
 
-                        // println!("indices:"); af::print(&af_indices);
-                        // println!("dists:"); af::print(&af_dists);
+                        draw_feature_correspondences(
+                            &mut target,
+                            &window_frame,
+                            &photo_frame,
+                            &video_frame,
+                            &train_features,
+                            &query_features,
+                            &af_indices
+                        );
 
                         // Get feature positons:
                         let af_train_xpos = train_features.xpos().unwrap();
@@ -239,62 +297,31 @@ fn main() {
                         idxrs_x.set_index(&af_indices, 0, None);
                         let mut idxrs_y = af::Indexer::new().unwrap();
                         idxrs_y.set_index(&af_indices, 0, None);
-                        // let m_f_xpos = f_xpos[&indices];
 
                         // Lookup matching feature positions:
                         let af_m_train_xpos = af::index_gen(&af_train_xpos, idxrs_x).unwrap();
                         let af_m_train_ypos = af::index_gen(&af_train_ypos, idxrs_y).unwrap();
 
-                        // // Test index_gen:
-                        // let indices = omr::utility::af_util::host_to_vec_u32(&af_indices);
-                        // let xpos = omr::utility::af_util::host_to_vec_f32(&f_xpos);
-                        // for (query_i, train_i) in indices.iter().cloned().enumerate() {
-                        //     let x = xpos[train_i as usize];
-                        //     println!("{}, {}, {}", query_i, train_i, x);
-                        // }
-                        // af::print(&m_f_xpos);
-
                         let af_query_xpos = query_features.xpos().unwrap();
                         let af_query_ypos = query_features.ypos().unwrap();
 
-                        let query_xpos = omr::utility::af_util::host_to_vec_f32(&af_query_xpos);
-                        let query_ypos = omr::utility::af_util::host_to_vec_f32(&af_query_ypos);
-                        let m_train_xpos = omr::utility::af_util::host_to_vec_f32(&af_m_train_xpos);
-                        let m_train_ypos = omr::utility::af_util::host_to_vec_f32(&af_m_train_ypos);
 
-                        for i in 0..num_current_features {
-                        // for i in 0..num_current_features {
-                            // Draw lines connecting matching features:
-                            let local_photo_point = na::Vector2::<f32>::new(m_train_xpos[i], m_train_ypos[i]);
-                            let local_video_point = na::Vector2::<f32>::new(query_xpos[i], query_ypos[i]);
+                        let homog_result = af::homography::<f32>(
+                            &af_query_xpos, &af_query_ypos, // src
+                            &af_m_train_xpos, &af_m_train_ypos, // dst
+                            af::HomographyType::RANSAC,
+                            10.0, // inlier_thr: minimum L2 distance for inliers
+                            100 // iterations
+                            // af::Aftype::F32 // otype
+                        );
+                        let (af_homog, num_inliers) = homog_result.unwrap();
 
-                            // photo_frame.draw_line(
-                            //     &mut target,
-                            //     local_photo_point,
-                            //     local_video_point,
-                            //     4.0,
-                            //     [1.0, 1.0, 1.0, 1.0]
-                            // );
+                        println!("homog: (num_inliers: {})", num_inliers);
+                        af::print(&af_homog);
 
-                            // video_frame.draw_line(
-                            //     &mut target,
-                            //     na::Vector2::<f32>::new(0.0, 0.0),
-                            //     na::Vector2::<f32>::new(100.0, 200.0),
-                            //     4.0,
-                            //     [1.0, 1.0, 1.0, 1.0]
-                            // );
+                        let homog = omr::utility::af_util::host_to_mat3_f32(&af_homog);
+                        println!("homog: {:?}", homog);
 
-                            let photo_point = photo_frame.local_to_parent(&local_photo_point);
-                            let video_point = video_frame.local_to_parent(&local_video_point);
-
-                            window_frame.draw_line(
-                                &mut target,
-                                photo_point,
-                                video_point,
-                                0.01,
-                                [1.0, 1.0, 1.0, 1.0]
-                            );
-                        }
                     }
                 }
 
