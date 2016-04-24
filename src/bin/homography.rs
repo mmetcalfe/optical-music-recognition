@@ -213,13 +213,15 @@ fn main() {
                         // println!("frame_descriptors:"); af::print(&frame_descriptors);
 
                         // Find the most similar features between the two images:
-                        let query = &frame_descriptors;
-                        let train = &orb_descriptors;
+                        let query_desc = &orb_descriptors;
+                        let query_features = &orb_features;
+                        let train_desc = &frame_descriptors;
+                        let train_features = &frame_features;
                         let dist_dims = 0;
                         let n_dist = 1;
                         let match_result = af::hamming_matcher(
-                            query,
-                            train,
+                            query_desc,
+                            train_desc,
                             dist_dims,
                             n_dist
                         );
@@ -229,8 +231,8 @@ fn main() {
                         // println!("dists:"); af::print(&af_dists);
 
                         // Get feature positons:
-                        let af_f_xpos = frame_features.xpos().unwrap();
-                        let af_f_ypos = frame_features.ypos().unwrap();
+                        let af_train_xpos = train_features.xpos().unwrap();
+                        let af_train_ypos = train_features.ypos().unwrap();
 
                         // Create an indexer using the matching result:
                         let mut idxrs_x = af::Indexer::new().unwrap();
@@ -240,8 +242,8 @@ fn main() {
                         // let m_f_xpos = f_xpos[&indices];
 
                         // Lookup matching feature positions:
-                        let af_m_f_xpos = af::index_gen(&af_f_xpos, idxrs_x).unwrap();
-                        let af_m_f_ypos = af::index_gen(&af_f_ypos, idxrs_y).unwrap();
+                        let af_m_train_xpos = af::index_gen(&af_train_xpos, idxrs_x).unwrap();
+                        let af_m_train_ypos = af::index_gen(&af_train_ypos, idxrs_y).unwrap();
 
                         // // Test index_gen:
                         // let indices = omr::utility::af_util::host_to_vec_u32(&af_indices);
@@ -252,16 +254,19 @@ fn main() {
                         // }
                         // af::print(&m_f_xpos);
 
-                        let f_xpos = omr::utility::af_util::host_to_vec_f32(&af_f_xpos);
-                        let f_ypos = omr::utility::af_util::host_to_vec_f32(&af_f_ypos);
-                        let m_f_xpos = omr::utility::af_util::host_to_vec_f32(&af_m_f_xpos);
-                        let m_f_ypos = omr::utility::af_util::host_to_vec_f32(&af_m_f_ypos);
+                        let af_query_xpos = query_features.xpos().unwrap();
+                        let af_query_ypos = query_features.ypos().unwrap();
 
-                        for i in 0..num_frame_features {
+                        let query_xpos = omr::utility::af_util::host_to_vec_f32(&af_query_xpos);
+                        let query_ypos = omr::utility::af_util::host_to_vec_f32(&af_query_ypos);
+                        let m_train_xpos = omr::utility::af_util::host_to_vec_f32(&af_m_train_xpos);
+                        let m_train_ypos = omr::utility::af_util::host_to_vec_f32(&af_m_train_ypos);
+
+                        for i in 0..num_current_features {
                         // for i in 0..num_current_features {
                             // Draw lines connecting matching features:
-                            let local_photo_point = na::Vector2::<f32>::new(f_xpos[i], f_ypos[i]);
-                            let local_video_point = na::Vector2::<f32>::new(m_f_xpos[i], m_f_ypos[i]);
+                            let local_photo_point = na::Vector2::<f32>::new(m_train_xpos[i], m_train_ypos[i]);
+                            let local_video_point = na::Vector2::<f32>::new(query_xpos[i], query_ypos[i]);
 
                             // photo_frame.draw_line(
                             //     &mut target,
