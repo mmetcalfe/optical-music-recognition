@@ -7,6 +7,8 @@ use std::borrow::Cow;
 use ffmpeg_camera::ffmpeg_utils;
 use super::glsl_functions;
 use utility;
+use nalgebra as na;
+use nalgebra::ToHomogeneous;
 
 extern crate core;
 // use self::core::ops::Deref;
@@ -48,6 +50,7 @@ pub struct ImagePane<'a> {
     uyuv_ycbcr_conversion_program : glium::Program,
     ycbcr_drawing_program : glium::Program,
     adaptive_threshold_program : glium::Program,
+    homog_drawing_program : glium::Program,
     identity_program : glium::Program,
     view_matrix: [[f32; 4]; 4],
 }
@@ -260,6 +263,40 @@ impl<'a> ImagePane<'a> {
         self.draw_texture_flipped(target, &self.ycbcr_drawing_program, texture)
     }
 
+    pub fn draw_image_homog_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image, homog: &na::Matrix3<f32>) {
+        let texture = self.ycbcr_image_to_texture(image);
+
+        let tex_uniform = glium::uniforms::Sampler::new(&texture)
+            .wrap_function(glium::uniforms::SamplerWrapFunction::Clamp);
+
+        // println!("homog.to_homogeneous().as_ref().clone(): {:?}", homog.to_homogeneous().as_ref().clone());
+
+        let uniforms = uniform! {
+            model: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32],
+            ],
+            // homog: homog.to_homogeneous().as_ref().clone(),
+            homog: homog.as_ref().clone(),
+            view: self.view_matrix,
+            tex: tex_uniform,
+        };
+
+        let params = glium::DrawParameters {
+            blend: glium::Blend::alpha_blending(),
+            .. Default::default()
+        };
+        target.draw(
+            &self.vertex_buffer,
+            &self.index_buffer,
+            &self.homog_drawing_program,
+            &uniforms,
+            &params
+        ).unwrap();
+    }
+
     pub fn make_uyuv_ycbcr_conversion_program(display : &glium::Display) -> glium::Program {
         let fragment_shader_src = String::new()
             + r#"
@@ -359,6 +396,91 @@ impl<'a> ImagePane<'a> {
         ).unwrap()
     }
 
+    pub fn make_homog_drawing_program(display : &glium::Display) -> glium::Program {
+        let vertex_shader_src = String::new()
+            + r#"
+            #version 140
+            in vec2 vertex_pos;
+            // in vec2 tex_coords;
+            out vec2 screen_pos;
+            // out vec2 v_tex_coords;
+            // uniform mat4 model;
+            // uniform mat4 view;
+            void main() {
+                // v_tex_coords = tex_coords;
+                // gl_Position = view * model * vec4(vertex_pos, 0.0, 1.0);
+                screen_pos = vertex_pos;
+                gl_Position = vec4(vertex_pos, 0.0, 1.0);
+            }
+        "#;
+
+        let fragment_shader_src = String::new()
+            + r#"
+            #version 400
+            //#version 140
+            // in vec2 v_tex_coords;
+            in vec2 screen_pos;
+            out vec4 color;
+            uniform mat4 model;
+            uniform mat4 view;
+            uniform mat3 homog;
+            uniform sampler2D tex;
+            "#
+            + glsl_functions::CONVERT_YCBCRA_RGBA
+            + r#"
+            void main() {
+                // vec4 tex_coords = apply_homography(homog, v_tex_coords);
+                // vec4 ycbcra = texture(tex, tex_coords);
+                // vec4 ycbcra = texture(tex, v_tex_coords);
+
+                // mat4 screen_to_frame = inverse(transpose(homog) * view * model);
+                // mat4 screen_to_frame = inverse(homog * view * model);
+                // mat4 screen_to_frame = inverse(inverse(homog) * view * model);
+                // mat4 screen_to_frame = inverse(view * model * inverse(homog));
+                // mat4 screen_to_frame = inverse(view * model * transpose(homog));
+                mat4 screen_to_frame = inverse(view * model);
+                vec4 frame_pos_4 = screen_to_frame * vec4(screen_pos, 1.0, 1.0);
+
+                vec3 frame_pos_homog = vec3(frame_pos_4.xy, 1.0);
+
+                frame_pos_homog.x *= 0.5*640;
+                frame_pos_homog.y *= 0.5*480;
+
+                // vec3 homog_pos = homog * frame_pos_homog;
+                // vec3 homog_pos = transpose(homog) * frame_pos_homog;
+                // vec3 homog_pos = inverse(homog) * frame_pos_homog;
+                vec3 homog_pos = inverse(transpose(homog)) * frame_pos_homog;
+
+                vec2 homog_normalised = homog_pos.xy / homog_pos.z;
+
+                homog_normalised.x /= 0.5*640;
+                homog_normalised.y /= 0.5*480;
+
+                vec2 tex_coord = homog_normalised;
+                tex_coord += 1.0;
+                tex_coord /= 2.0;
+
+                if (tex_coord.x > 1.0 || tex_coord.x < 0.0 ||
+                   tex_coord.y > 1.0 || tex_coord.y < 0.0) {
+                   color = vec4(0.0, 0.0, 0.0, 0.0);
+                   return;
+                }
+                vec4 ycbcra = texture(tex, tex_coord);
+                vec4 rgba = convert_ycbcra_rgba(ycbcra);
+                color = rgba;
+
+                color.a = 0.5;
+            }
+        "#;
+
+        glium::Program::from_source(
+            display,
+            &vertex_shader_src,
+            &fragment_shader_src,
+            None
+        ).unwrap()
+    }
+
     pub fn new(display : &glium::Display) -> ImagePane {
         // let v = 0.95;
         let v = 1.0;
@@ -384,6 +506,7 @@ impl<'a> ImagePane<'a> {
             ycbcr_drawing_program: Self::make_ycbcr_drawing_program(display),
             adaptive_threshold_program: Self::make_adaptive_threshold_program(display),
             identity_program: Self::make_identity_program(display),
+            homog_drawing_program: Self::make_homog_drawing_program(display),
             view_matrix: [
                 [1.0, 0.0, 0.0, 0.0],
                 [0.0, 1.0, 0.0, 0.0],

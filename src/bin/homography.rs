@@ -152,8 +152,8 @@ fn main() {
     println!("Available ArrayFire backends: {:?}", af::get_available_backends());
 
     // let (img_w, img_h) = (320, 240);
-    // let (img_w, img_h) = (640, 480);
-    let (img_w, img_h) = (1280, 720);
+    let (img_w, img_h) = (640, 480);
+    // let (img_w, img_h) = (1280, 720);
     // let (img_w, img_h) = (1920, 1080);
 
     let mut camera = ffmpeg_camera::FfmpegCamera::get_best((img_w, img_h))
@@ -189,6 +189,15 @@ fn main() {
         angle: 0.0,
     };
     video_frame.frame_dims = na::Vector2::<f32>::new(img_w as f32, img_h as f32);
+
+    let mut homog_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    homog_frame.rect = gm::RotatedRectangle {
+        position: [0.0, -0.5],
+        size: [0.5, 0.5],
+        angle: 0.0,
+    };
+    homog_frame.frame_dims = na::Vector2::<f32>::new(img_w as f32, img_h as f32);
+
 
     let mut frame_start_time = SteadyTime::now();
 
@@ -231,10 +240,12 @@ fn main() {
             // let levels = 4;
             // let blur_img = true;
 
-            let fast_thr = 60.0;
-            let max_feat = 16;
-            let scl_fctr = 1.25;
-            let levels = 6;
+            // let fast_thr = 60.0;
+            let fast_thr = 30.0;
+            let max_feat = 1024;
+            // let max_feat = 32;
+            let scl_fctr = 1.2;
+            let levels = 16;
             let blur_img = true;
 
             let orb_result = af::orb(
@@ -278,6 +289,20 @@ fn main() {
                         );
                         let (af_indices, af_dists) = match_result.unwrap();
 
+                        // // Filter out bad matches:
+                        // // af::print(&af_dists);
+                        // let dists_dims = af_dists.dims().unwrap();
+                        // let compare = af::le(&af_dists, &af::constant(50.0 as f32, dists_dims).unwrap(), false).unwrap();
+                        // println!("dists_dims: {:?}", &dists_dims);
+                        // // af::print(&compare);
+                        // af::print(&af_indices);
+                        //
+                        // let no_index = af::constant(100000 as u32, dists_dims).unwrap();
+                        // println!("af_indices, select,");
+                        // let af_indices = af::select(&af_indices, &compare, &no_index).unwrap();
+                        // println!("select: {:?}", &af_indices.dims().unwrap());
+                        // af::print(&af_indices);
+
                         draw_feature_correspondences(
                             &mut target,
                             &window_frame,
@@ -292,15 +317,22 @@ fn main() {
                         let af_train_xpos = train_features.xpos().unwrap();
                         let af_train_ypos = train_features.ypos().unwrap();
 
-                        // Create an indexer using the matching result:
-                        let mut idxrs_x = af::Indexer::new().unwrap();
-                        idxrs_x.set_index(&af_indices, 0, None);
-                        let mut idxrs_y = af::Indexer::new().unwrap();
-                        idxrs_y.set_index(&af_indices, 0, None);
+                        // // Create an indexer using the matching result:
+                        // let mut idxrs_x = af::Indexer::new().unwrap();
+                        // idxrs_x.set_index(&af_indices, 0, None);
+                        // let mut idxrs_y = af::Indexer::new().unwrap();
+                        // idxrs_y.set_index(&af_indices, 0, None);
+                        //
+                        // // Lookup matching feature positions:
+                        // let af_m_train_xpos = af::index_gen(&af_train_xpos, idxrs_x).unwrap();
+                        // let af_m_train_ypos = af::index_gen(&af_train_ypos, idxrs_y).unwrap();
 
-                        // Lookup matching feature positions:
-                        let af_m_train_xpos = af::index_gen(&af_train_xpos, idxrs_x).unwrap();
-                        let af_m_train_ypos = af::index_gen(&af_train_ypos, idxrs_y).unwrap();
+                        let af_m_train_xpos = af::lookup(&af_train_xpos, &af_indices, 0).unwrap();
+                        let af_m_train_ypos = af::lookup(&af_train_ypos, &af_indices, 0).unwrap();
+
+                        // println!("af_m_train_xpos: {:?}", &af_m_train_xpos.dims().unwrap());
+                        // af::print(&af_m_train_xpos);
+
 
                         let af_query_xpos = query_features.xpos().unwrap();
                         let af_query_ypos = query_features.ypos().unwrap();
@@ -310,8 +342,9 @@ fn main() {
                             &af_query_xpos, &af_query_ypos, // src
                             &af_m_train_xpos, &af_m_train_ypos, // dst
                             af::HomographyType::RANSAC,
-                            10.0, // inlier_thr: minimum L2 distance for inliers
-                            100 // iterations
+                            3.0, // inlier_thr: minimum L2 distance for inliers
+                            // 4096 // iterations
+                            4096 * 2 // iterations
                             // af::Aftype::F32 // otype
                         );
                         let (af_homog, num_inliers) = homog_result.unwrap();
@@ -322,6 +355,11 @@ fn main() {
                         let homog = omr::utility::af_util::host_to_mat3_f32(&af_homog);
                         println!("homog: {:?}", homog);
 
+
+                        if let Some(ref frame) = captured_frame {
+                            homog_frame.draw_image_ycbcr(&mut target, &frame);
+                            homog_frame.draw_image_homog_ycbcr(&mut target, &ycbcr_frame, &homog);
+                        }
                     }
                 }
 

@@ -158,6 +158,11 @@ impl<'a> DrawingFrame<'a> {
         self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
     }
 
+    pub fn draw_image_homog_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image, homog: &na::Matrix3<f32>) {
+        self.set_view_matrices();
+        self.ctx.borrow_mut().image_pane.draw_image_homog_ycbcr(target, image, homog)
+    }
+
     pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vector2<f32>, lw : f32, colour : [f32; 4]) {
         self.set_view_matrices();
         let rect = RotatedRectangle {
