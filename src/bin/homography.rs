@@ -95,6 +95,39 @@ fn draw_orb_features<I: Image>(
     }
 }
 
+fn draw_point_correspondences(
+    target: &mut glium::Frame,
+    window_frame: &omr::drawing::context::DrawingFrame,
+    train_frame: &omr::drawing::context::DrawingFrame,
+    query_frame: &omr::drawing::context::DrawingFrame,
+    af_train_xpos: &af::Array,
+    af_train_ypos: &af::Array,
+    af_query_xpos: &af::Array,
+    af_query_ypos: &af::Array,
+    colour: [f32; 4]
+) {
+    let query_xpos = omr::utility::af_util::host_to_vec_f32(&af_query_xpos);
+    let query_ypos = omr::utility::af_util::host_to_vec_f32(&af_query_ypos);
+    let train_xpos = omr::utility::af_util::host_to_vec_f32(&af_train_xpos);
+    let train_ypos = omr::utility::af_util::host_to_vec_f32(&af_train_ypos);
+
+    for i in 0..query_xpos.len() {
+        let local_photo_point = na::Vector2::<f32>::new(train_xpos[i], train_ypos[i]);
+        let local_video_point = na::Vector2::<f32>::new(query_xpos[i], query_ypos[i]);
+
+        let photo_point = train_frame.local_to_parent(&local_photo_point);
+        let video_point = query_frame.local_to_parent(&local_video_point);
+
+        window_frame.draw_line(
+            target,
+            photo_point,
+            video_point,
+            0.01,
+            colour
+        );
+    }
+}
+
 fn draw_feature_correspondences(
     target: &mut glium::Frame,
     window_frame: &omr::drawing::context::DrawingFrame,
@@ -110,40 +143,25 @@ fn draw_feature_correspondences(
     let af_train_xpos = train_features.xpos().unwrap();
     let af_train_ypos = train_features.ypos().unwrap();
 
-    // Create an indexer using the matching result:
-    let mut idxrs_x = af::Indexer::new().unwrap();
-    idxrs_x.set_index(train_indices, 0, None);
-    let mut idxrs_y = af::Indexer::new().unwrap();
-    idxrs_y.set_index(train_indices, 0, None);
-
     // Lookup matching feature positions:
     // let m_f_xpos = f_xpos[&indices];
-    let af_m_train_xpos = af::index_gen(&af_train_xpos, idxrs_x).unwrap();
-    let af_m_train_ypos = af::index_gen(&af_train_ypos, idxrs_y).unwrap();
+    let af_m_train_xpos = af::lookup(&af_train_xpos, &train_indices, 0).unwrap();
+    let af_m_train_ypos = af::lookup(&af_train_ypos, &train_indices, 0).unwrap();
 
     let af_query_xpos = query_features.xpos().unwrap();
     let af_query_ypos = query_features.ypos().unwrap();
 
-    let query_xpos = omr::utility::af_util::host_to_vec_f32(&af_query_xpos);
-    let query_ypos = omr::utility::af_util::host_to_vec_f32(&af_query_ypos);
-    let m_train_xpos = omr::utility::af_util::host_to_vec_f32(&af_m_train_xpos);
-    let m_train_ypos = omr::utility::af_util::host_to_vec_f32(&af_m_train_ypos);
-
-    for i in 0..num_query_features {
-        let local_photo_point = na::Vector2::<f32>::new(m_train_xpos[i], m_train_ypos[i]);
-        let local_video_point = na::Vector2::<f32>::new(query_xpos[i], query_ypos[i]);
-
-        let photo_point = train_frame.local_to_parent(&local_photo_point);
-        let video_point = query_frame.local_to_parent(&local_video_point);
-
-        window_frame.draw_line(
-            target,
-            photo_point,
-            video_point,
-            0.01,
-            [1.0, 1.0, 1.0, 1.0]
-        );
-    }
+    draw_point_correspondences(
+        target,
+        window_frame,
+        train_frame,
+        query_frame,
+        &af_m_train_xpos,
+        &af_m_train_ypos,
+        &af_query_xpos,
+        &af_query_ypos,
+        [1.0, 1.0, 1.0, 1.0]
+    );
 }
 
 fn main() {
@@ -241,11 +259,11 @@ fn main() {
             // let blur_img = true;
 
             // let fast_thr = 60.0;
-            let fast_thr = 30.0;
+            let fast_thr = 20.0;
             let max_feat = 1024;
             // let max_feat = 32;
-            let scl_fctr = 1.2;
-            let levels = 16;
+            let scl_fctr = 1.5;
+            let levels = 4;
             let blur_img = true;
 
             let orb_result = af::orb(
@@ -289,14 +307,29 @@ fn main() {
                         );
                         let (af_indices, af_dists) = match_result.unwrap();
 
-                        // // Filter out bad matches:
-                        // // af::print(&af_dists);
-                        // let dists_dims = af_dists.dims().unwrap();
-                        // let compare = af::le(&af_dists, &af::constant(50.0 as f32, dists_dims).unwrap(), false).unwrap();
+                        // Detect bad matches:
+                        // af::print(&af_dists);
+                        let dists_dims = af_dists.dims().unwrap();
+                        let af_bad_threshold = af::constant(70.0 as f32, dists_dims).unwrap();
+                        let af_index_classes = af::ge(&af_dists, &af_bad_threshold, false).unwrap();
                         // println!("dists_dims: {:?}", &dists_dims);
-                        // // af::print(&compare);
+                        // af::print(&compare);
                         // af::print(&af_indices);
-                        //
+
+                        let index_classes = omr::utility::af_util::host_to_vec_bool(&af_index_classes);
+
+                        let mut good_indices = Vec::new();
+                        for (i, ge_bad) in index_classes.iter().cloned().enumerate() {
+                            if !ge_bad {
+                                good_indices.push(i as u32);
+                            }
+                        }
+                        let shape = [1, good_indices.len() as u64, 1, 1];
+                        let af_good_indices = af::Array::new(&good_indices, af::Dim4::new(&shape)).unwrap();
+
+                        println!("full_dims: {:?}", af_indices.dims().unwrap());
+                        println!("good_dims: {:?}", af_good_indices.dims().unwrap());
+
                         // let no_index = af::constant(100000 as u32, dists_dims).unwrap();
                         // println!("af_indices, select,");
                         // let af_indices = af::select(&af_indices, &compare, &no_index).unwrap();
@@ -338,13 +371,31 @@ fn main() {
                         let af_query_ypos = query_features.ypos().unwrap();
 
 
+                        // Use only the good indices:
+                        let af_m_train_xpos = af::lookup(&af_m_train_xpos, &af_good_indices, 0).unwrap();
+                        let af_m_train_ypos = af::lookup(&af_m_train_ypos, &af_good_indices, 0).unwrap();
+                        let af_query_xpos = af::lookup(&af_query_xpos, &af_good_indices, 0).unwrap();
+                        let af_query_ypos = af::lookup(&af_query_ypos, &af_good_indices, 0).unwrap();
+
+                        draw_point_correspondences(
+                            &mut target,
+                            &window_frame,
+                            &photo_frame,
+                            &video_frame,
+                            &af_m_train_xpos,
+                            &af_m_train_ypos,
+                            &af_query_xpos,
+                            &af_query_ypos,
+                            [1.0, 0.0, 0.0, 1.0]
+                        );
+
                         let homog_result = af::homography::<f32>(
                             &af_query_xpos, &af_query_ypos, // src
                             &af_m_train_xpos, &af_m_train_ypos, // dst
                             af::HomographyType::RANSAC,
-                            3.0, // inlier_thr: minimum L2 distance for inliers
+                            2.0, // inlier_thr: minimum L2 distance for inliers
                             // 4096 // iterations
-                            4096 * 2 // iterations
+                            4096 * 8 // iterations
                             // af::Aftype::F32 // otype
                         );
                         let (af_homog, num_inliers) = homog_result.unwrap();
@@ -354,7 +405,6 @@ fn main() {
 
                         let homog = omr::utility::af_util::host_to_mat3_f32(&af_homog);
                         println!("homog: {:?}", homog);
-
 
                         if let Some(ref frame) = captured_frame {
                             homog_frame.draw_image_ycbcr(&mut target, &frame);
