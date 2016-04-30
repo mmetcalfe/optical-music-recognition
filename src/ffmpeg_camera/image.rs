@@ -46,8 +46,8 @@ pub trait Image : Clone {
     }
 
     fn opengl_coords_for_point(&self, point: na::Vector2<f32>) -> na::Vector2<f32> {
-        let px = point[0];
-        let py = point[1];
+        let px = point[0] + 0.5;
+        let py = point[1] + 0.5;
 
         // // // Half-pixel offsets:
         // // let ox = 0.5 / width;

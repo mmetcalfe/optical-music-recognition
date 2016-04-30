@@ -46,6 +46,9 @@ pub struct DrawingFrame<'a> {
 
     /// Virtual pixel dimensions of the frame. This determines the frame's scale.
     pub frame_dims: na::Vector2<f32>,
+
+    /// Displacement in the frame's viewport transform.
+    pub frame_centre: na::Vector2<f32>,
 }
 
 impl<'a> DrawingContext<'a> {
@@ -71,49 +74,83 @@ impl<'a> DrawingContext<'a> {
                 angle: 0.0,
             },
             frame_dims: na::Vector2::new(2.0, 2.0),
+            frame_centre: na::Vector2::new(0.0, 0.0),
         }
     }
 
-    pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
-        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
-        self.image_pane.convert_uyvy_ycbcr(uyvy_image)
-    }
-
-    pub fn convert_preprocess_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
-        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
-        self.image_pane.convert_preprocess_uyvy_ycbcr(uyvy_image)
+    pub fn get_conversion_frame(self_: &'a RefCell<Self>) -> DrawingFrame<'a> {
+        DrawingFrame::<'a> {
+            ctx: self_,
+            rect: gm::RotatedRectangle {
+                position: [0.0, 0.0],
+                size: [2.0, 2.0],
+                angle: 0.0,
+            },
+            frame_dims: na::Vector2::new(2.0, 2.0),
+            frame_centre: na::Vector2::new(-1.0, -1.0),
+        }
     }
 }
 
 impl<'a> DrawingFrame<'a> {
 
+    pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        self.set_view_matrices();
+        self.ctx.borrow_mut().image_pane.convert_uyvy_ycbcr(uyvy_image)
+    }
+
+    pub fn convert_preprocess_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
+        -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
+        self.set_view_matrices();
+        self.ctx.borrow_mut().image_pane.convert_preprocess_uyvy_ycbcr(uyvy_image)
+    }
+
     fn make_scale_transform(&self) -> [[f32; 4]; 4] {
         // let (width, height) = self.frame_dims;
-        let xs = 2.0 / self.frame_dims[0];
-        let ys = 2.0 / self.frame_dims[1];
+        // let xs = 2.0 / self.frame_dims[0];
+        // let ys = 2.0 / self.frame_dims[1];
+        let xs = 1.0 / self.frame_dims[0];
+        let ys = 1.0 / self.frame_dims[1];
         let scale_transform = [
             [xs, 0.0, 0.0, 0.0],
-            [0.0, -ys, 0.0, 0.0],
+            [0.0, ys, 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
-            [-1.0, 1.0, 0.0, 1.0f32],
+            [0.0, 0.0, 0.0, 1.0f32],
         ];
 
         scale_transform
     }
 
+    fn make_viewport_transform(&self) -> [[f32; 4]; 4] {
+        let xc = self.frame_centre[0];
+        let yc = self.frame_centre[1];
+        [
+            [2.0, 0.0, 0.0, 0.0],
+            [0.0, 2.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            // [0.0, 0.0, 0.0, 1.0f32],
+            [xc, yc, 0.0, 1.0f32],
+        ]
+    }
+
     pub fn local_to_parent(&self, point: &na::Vector2<f32>) -> na::Vector2<f32> {
         let frame_transform = self.rect.get_transform();
+        let viewport_transform = self.make_viewport_transform();
         let scale_transform = self.make_scale_transform();
 
         let frame_mat = na::Matrix4::<f32>::from(&frame_transform);
+        let vp_mat = na::Matrix4::<f32>::from(&viewport_transform);
         let scale_mat = na::Matrix4::<f32>::from(&scale_transform);
-        let trans_mat = frame_mat.mul(scale_mat);
+        let trans_mat = frame_mat.mul(vp_mat.mul(scale_mat));
 
         let point_4 = na::Vector4::<f32>::new(point[0], point[1], 0.0, 1.0);
 
         let trans_4 = trans_mat.mul(point_4);
 
-        na::Vector2::<f32>::new(1.0 + trans_4[0], 1.0 - trans_4[1])
+        // na::Vector2::<f32>::new(1.0 + trans_4[0], 1.0 - trans_4[1])
+        // na::Vector2::<f32>::new(1.0 + trans_4[0], 1.0 + trans_4[1])
+        na::Vector2::<f32>::new(trans_4[0], trans_4[1])
     }
 
     pub fn draw_string(&self, target: &mut glium::Frame, string: &str, pos: na::Vector2<f32>, scale: f32, colour: (f32, f32, f32, f32)) {
@@ -121,7 +158,7 @@ impl<'a> DrawingFrame<'a> {
         self.ctx.borrow_mut().text_helper.draw_string(target, string, pos, scale, colour)
     }
 
-    pub fn set_view_matrices(&self) {
+    pub fn make_view_matrix(&self) -> na::Matrix4<f32> {
         // xo, yo = (0, 0)
         // w, h = framebufferSize
         // vpMat = np.matrix([
@@ -132,15 +169,24 @@ impl<'a> DrawingFrame<'a> {
         // ], np.float32)
 
         let frame_transform = self.rect.get_transform();
+        let viewport_transform = self.make_viewport_transform();
         let scale_transform = self.make_scale_transform();
 
         let frame_mat = na::Matrix4::<f32>::from(&frame_transform);
+        let vp_mat = na::Matrix4::<f32>::from(&viewport_transform);
         let scale_mat = na::Matrix4::<f32>::from(&scale_transform);
-        let trans_mat = frame_mat.mul(scale_mat);
+        let trans_mat = frame_mat.mul(vp_mat.mul(scale_mat));
+
+        trans_mat
+    }
+
+    pub fn set_view_matrices(&self) {
+        let trans_mat = self.make_view_matrix();
 
         let mut ctx = self.ctx.borrow_mut();
         ctx.rectangle_buffer.set_view_matrix(trans_mat.as_ref());
-        ctx.image_pane.set_view_matrix(frame_mat.as_ref());
+        // ctx.image_pane.set_view_matrix(frame_mat.as_ref());
+        ctx.image_pane.set_view_matrix(trans_mat.as_ref());
     }
 
     pub fn draw_rectangle(&self, target : &mut glium::Frame, rect : &RotatedRectangle, colour : [f32; 4]) {
@@ -158,9 +204,18 @@ impl<'a> DrawingFrame<'a> {
         self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
     }
 
-    pub fn draw_image_homog_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image, homog: &na::Matrix3<f32>) {
+    pub fn draw_image_homog_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image, reference: &Self, homog: &na::Matrix3<f32>) {
         self.set_view_matrices();
-        self.ctx.borrow_mut().image_pane.draw_image_homog_ycbcr(target, image, homog)
+        let reference_scale = na::Matrix4::<f32>::from(&reference.make_scale_transform());
+        let view = reference.make_view_matrix();
+        // self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
+        self.ctx.borrow_mut().image_pane.draw_image_homog_ycbcr(
+            target,
+            image,
+            &view,
+            &reference_scale,
+            homog
+        )
     }
 
     pub fn draw_point(&self, target : &mut glium::Frame, pt : na::Vector2<f32>, lw : f32, colour : [f32; 4]) {

@@ -85,6 +85,9 @@ fn draw_orb_features<I: Image>(
 
             let frame_point = frame.local_to_parent(&draw_pt);
             // println!("frame_point: {:?}", frame_point);
+
+            // println!("{:?} -> {:?}", &draw_pt, &frame_point);
+
             window_frame.draw_point(
                 target,
                 frame_point,
@@ -191,6 +194,7 @@ fn main() {
     let mut draw_ctx = RefCell::new(drawing::context::DrawingContext::new(&display));
     draw_ctx.borrow_mut().set_window_dims(window_dims);
     let mut window_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    let mut conversion_frame = drawing::context::DrawingContext::get_conversion_frame(&draw_ctx);
 
     let mut photo_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
     photo_frame.rect = gm::RotatedRectangle {
@@ -199,6 +203,7 @@ fn main() {
         angle: 0.0,
     };
     photo_frame.frame_dims = na::Vector2::<f32>::new(img_w as f32, img_h as f32);
+    photo_frame.frame_centre = na::Vector2::<f32>::new(-1.0, -1.0);
 
     let mut video_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
     video_frame.rect = gm::RotatedRectangle {
@@ -207,6 +212,7 @@ fn main() {
         angle: 0.0,
     };
     video_frame.frame_dims = na::Vector2::<f32>::new(img_w as f32, img_h as f32);
+    video_frame.frame_centre = na::Vector2::<f32>::new(-1.0, -1.0);
 
     let mut homog_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
     homog_frame.rect = gm::RotatedRectangle {
@@ -215,6 +221,17 @@ fn main() {
         angle: 0.0,
     };
     homog_frame.frame_dims = na::Vector2::<f32>::new(img_w as f32, img_h as f32);
+    homog_frame.frame_centre = na::Vector2::<f32>::new(-1.0, -1.0);
+
+    let mut homog_container = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    homog_container.rect = gm::RotatedRectangle {
+        position: [0.0, -0.5],
+        size: [2.0, 1.0],
+        angle: 0.0,
+    };
+    homog_container.frame_dims = na::Vector2::<f32>::new(img_w as f32 / 2.0, img_h as f32);
+    homog_container.frame_centre = na::Vector2::<f32>::new(-1.0, -1.0);
+
 
 
     let mut frame_start_time = SteadyTime::now();
@@ -228,7 +245,7 @@ fn main() {
         // Get webcam frame:
         let webcam_frame = camera.get_image_uyvy().unwrap();
         // webcam_frame.save_jpeg("image_uyvy.jpg").unwrap();
-        let ycbcr_frame = draw_ctx.borrow_mut().convert_uyvy_ycbcr(&webcam_frame).unwrap();
+        let mut ycbcr_frame = conversion_frame.convert_uyvy_ycbcr(&webcam_frame).unwrap();
         // // Fake webcam frame:
         // let ycbcr_frame = get_fake_webcam_frame();
 
@@ -408,7 +425,7 @@ fn main() {
 
                         if let Some(ref frame) = captured_frame {
                             homog_frame.draw_image_ycbcr(&mut target, &frame);
-                            homog_frame.draw_image_homog_ycbcr(&mut target, &ycbcr_frame, &homog);
+                            homog_container.draw_image_homog_ycbcr(&mut target, &ycbcr_frame, &homog_frame, &homog);
                         }
                     }
                 }
