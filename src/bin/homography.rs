@@ -240,6 +240,8 @@ fn main() {
     let mut captured_frame_features: Option<(af::Features, af::Array)> = None;
     let mut take_photo = false;
 
+    println!("Begin main loop:");
+
     loop {
     // {
         // Get webcam frame:
@@ -249,7 +251,7 @@ fn main() {
         // // Fake webcam frame:
         // let ycbcr_frame = get_fake_webcam_frame();
 
-        // println!("save:");
+        println!("save:");
         ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
 
         let mut target = display.draw();
@@ -259,6 +261,7 @@ fn main() {
             photo_frame.draw_image_ycbcr(&mut target, &frame);
         }
 
+        println!("greyscale:");
         // Obtain greyscale image:
         let img_grey = {
             let img_ycbcra = &ycbcr_frame.af_data;
@@ -266,6 +269,9 @@ fn main() {
             let img_grey = af::slice(img_ycbcra, 0).unwrap();
             img_grey.cast::<f32>().unwrap()
         };
+
+        let mut processing_start_time = SteadyTime::now();
+        let mut homog_start_time = SteadyTime::now();
 
         {
             // Begin ORB detection:
@@ -275,13 +281,17 @@ fn main() {
             // let levels = 4;
             // let blur_img = true;
 
-            // let fast_thr = 60.0;
             let fast_thr = 20.0;
             let max_feat = 1024;
-            // let max_feat = 32;
             let scl_fctr = 1.5;
             let levels = 4;
             let blur_img = true;
+
+            // let fast_thr = 80.0;
+            // let max_feat = 24;
+            // let scl_fctr = 2.0;
+            // let levels = 2;
+            // let blur_img = false;
 
             let orb_result = af::orb(
                 &img_grey,
@@ -406,13 +416,15 @@ fn main() {
                             [1.0, 0.0, 0.0, 1.0]
                         );
 
+                        homog_start_time = SteadyTime::now();
                         let homog_result = af::homography::<f32>(
                             &af_query_xpos, &af_query_ypos, // src
                             &af_m_train_xpos, &af_m_train_ypos, // dst
                             af::HomographyType::RANSAC,
                             2.0, // inlier_thr: minimum L2 distance for inliers
                             // 4096 // iterations
-                            4096 * 8 // iterations
+                            // 4096 * 8 // iterations
+                            512 // iterations
                             // af::Aftype::F32 // otype
                         );
                         let (af_homog, num_inliers) = homog_result.unwrap();
@@ -445,15 +457,20 @@ fn main() {
         }
 
         let frame_duration = SteadyTime::now() - frame_start_time;
+        let processing_duration = SteadyTime::now() - processing_start_time;
+        let homog_duration = SteadyTime::now() - homog_start_time;
         frame_start_time = SteadyTime::now();
         let mspf = frame_duration.num_milliseconds();
+        let processing_ms = processing_duration.num_milliseconds();
+        let processing_frac = 100.0 * processing_ms as f32 / mspf as f32;
+        let homog_frac = 100.0 * homog_duration.num_milliseconds() as f32 / mspf as f32;
         let fps = 1000.0 / (mspf as f32);
-        let time_str = format!("{} ms/frame, {} fps", mspf, fps);
+        let time_str = format!("{} ms/frame, {} fps, processing: {}%, homog: {}%", mspf, fps, processing_frac - homog_frac, homog_frac);
         window_frame.draw_string(
             &mut target,
             &time_str,
             na::Vector2::<f32>::new(-1.0, -1.0),
-            0.03,
+            0.06,
             (0.0,0.0,0.0,1.0)
         );
 
