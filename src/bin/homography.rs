@@ -13,6 +13,7 @@ use omr::ffmpeg_camera::ffmpeg_camera;
 use omr::ffmpeg_camera::ffmpeg_utils;
 use omr::ffmpeg_camera::image::Image;
 use omr::ffmpeg_camera::image_ycbcr;
+use omr::ffmpeg_camera::AfImage;
 use omr::drawing;
 use omr::math;
 use omr::geometry as gm;
@@ -232,8 +233,6 @@ fn main() {
     homog_container.frame_dims = na::Vector2::<f32>::new(img_w as f32 / 2.0, img_h as f32);
     homog_container.frame_centre = na::Vector2::<f32>::new(-1.0, -1.0);
 
-
-
     let mut frame_start_time = SteadyTime::now();
 
     let mut captured_frame: Option<image_ycbcr::Image> = None;
@@ -263,12 +262,7 @@ fn main() {
 
         println!("greyscale:");
         // Obtain greyscale image:
-        let img_grey = {
-            let img_ycbcra = &ycbcr_frame.af_data;
-            // println!("shape: {}", img_ycbcra.dims().unwrap());
-            let img_grey = af::slice(img_ycbcra, 0).unwrap();
-            img_grey.cast::<f32>().unwrap()
-        };
+        let img_grey = ycbcr_frame.af_grey();
 
         let mut processing_start_time = SteadyTime::now();
         let mut homog_start_time = SteadyTime::now();

@@ -5,7 +5,8 @@ use ffmpeg_camera::ffmpeg_utils;
 use ffmpeg_camera::ffmpeg_utils::FfmpegError;
 // use nalgebra as na;
 use std;
-use ffmpeg_camera::image;
+use ffmpeg_camera;
+use ffmpeg_camera::image::Pixel;
 use utility;
 
 #[derive(Clone)]
@@ -100,7 +101,7 @@ impl Image {
 }
 
 
-impl image::Image for Image {
+impl ffmpeg_camera::Image for Image {
     fn from_raw_parts(width: usize, height: usize, data: Vec<u8>) -> Image {
         // Data is an array containing raw interleaved YCbCrA data.
         // let shape = [height as u64, width as u64, 4, 1];
@@ -128,7 +129,7 @@ impl image::Image for Image {
     //     &self.data
     // }
 
-    fn index(&self, col : usize, row : usize) -> image::Pixel {
+    fn index(&self, col : usize, row : usize) -> Pixel {
         if !self.contains(col, row) {
             panic!("Image index out of bounds.");
         }
@@ -140,14 +141,14 @@ impl image::Image for Image {
         let cr_i = p_i + 2;
 
         unsafe {
-            image::Pixel {
+            Pixel {
                 y: *self.local_data.get_unchecked(y_i),
                 cb: *self.local_data.get_unchecked(cb_i),
                 cr: *self.local_data.get_unchecked(cr_i),
             }
         }
 
-        // image::Pixel {
+        // Pixel {
         //     y: self.local_data[y_i],
         //     cb: self.local_data[y_i + 1],
         //     cr: self.local_data[y_i + 2],
@@ -174,5 +175,14 @@ impl image::Image for Image {
         }
 
         Ok(())
+    }
+}
+
+impl ffmpeg_camera::AfImage for Image {
+    fn af_grey(&self) -> af::Array {
+        let img_ycbcra = &self.af_data;
+        // println!("shape: {}", img_ycbcra.dims().unwrap());
+        let img_grey = af::slice(img_ycbcra, 0).unwrap();
+        img_grey.cast::<f32>().unwrap()
     }
 }
