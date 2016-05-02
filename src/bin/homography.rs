@@ -76,8 +76,8 @@ fn draw_orb_features<I: Image>(
         let ypos = omr::utility::af_util::host_to_vec_f32(&af_ypos);
 
         for i in 0..num_features {
-            let x = xpos[i];
-            let y = ypos[i];
+            let y = xpos[i];
+            let x = ypos[i];
             // println!("Feature {}: {:?}.", i, (x, y));
             let draw_pt = na::Vector2::new(x, y);
             // let draw_pt = image.opengl_coords_for_point(pt);
@@ -160,10 +160,10 @@ fn draw_feature_correspondences(
         window_frame,
         train_frame,
         query_frame,
-        &af_m_train_xpos,
         &af_m_train_ypos,
-        &af_query_xpos,
+        &af_m_train_xpos,
         &af_query_ypos,
+        &af_query_xpos,
         [1.0, 1.0, 1.0, 1.0]
     );
 }
@@ -252,7 +252,8 @@ fn main() {
         // Get nv12 frame:
         let mut webcam_frame = camera.get_image_nv12().unwrap();
 
-        println!("webcam_frame: {}x{}", webcam_frame.width(), webcam_frame.height());
+        // println!("webcam_frame: {}x{}", webcam_frame.width(), webcam_frame.height());
+        // println!("dims: {:?}", webcam_frame.af_data.dims().unwrap());
 
         // // Fake webcam frame:
         // let webcam_frame = get_fake_webcam_frame();
@@ -423,8 +424,8 @@ fn main() {
 
                         homog_start_time = SteadyTime::now();
                         let homog_result = af::homography::<f32>(
-                            &af_query_xpos, &af_query_ypos, // src
-                            &af_m_train_xpos, &af_m_train_ypos, // dst
+                            &af_query_ypos, &af_query_xpos, // src
+                            &af_m_train_ypos, &af_m_train_xpos, // dst
                             af::HomographyType::RANSAC,
                             2.0, // inlier_thr: minimum L2 distance for inliers
                             // 4096 // iterations

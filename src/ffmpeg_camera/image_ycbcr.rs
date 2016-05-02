@@ -108,7 +108,8 @@ impl ffmpeg_camera::Image for Image {
         let shape = [4, width as u64, height as u64, 1];
         let img_32bit = af::Array::new(&data, af::Dim4::new(&shape)).unwrap();
         // i.e. [YCbCrA YCbCrA YCbCrA] -> [YYY CbCb CrCr AAA]
-        let img_32bit = af::reorder(&img_32bit, af::Dim4::new(&[2, 1, 0, 3])).unwrap();
+        // let img_32bit = af::reorder(&img_32bit, af::Dim4::new(&[2, 1, 0, 3])).unwrap();
+        let img_32bit = af::reorder(&img_32bit, af::Dim4::new(&[1, 2, 0, 3])).unwrap();
 
         Image {
             width: width,

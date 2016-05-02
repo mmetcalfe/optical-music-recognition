@@ -20,7 +20,8 @@ pub struct Image {
 impl ffmpeg_camera::Image for Image {
     fn from_raw_parts(width: usize, height: usize, data: Vec<u8>) -> Image {
         // Data is an array containing raw interleaved YCbCrA data.
-        // let shape = [height as u64, width as u64, 4, 1];
+        // let shape = [1, height as u64, width as u64, 1];
+        // let shape = [height as u64, width as u64, 1, 1];
         let shape = [width as u64, height as u64, 1, 1];
         let img_nv12 = af::Array::new(&data, af::Dim4::new(&shape)).unwrap();
         // // i.e. [YCbCrA YCbCrA YCbCrA] -> [YYY CbCb CrCr AAA]
@@ -98,6 +99,7 @@ impl ffmpeg_camera::Image for Image {
 
 impl ffmpeg_camera::AfImage for Image {
     fn af_grey(&self) -> af::Array {
-        self.af_grey.clone()
+        // self.af_grey.clone()
+        self.af_grey.cast::<f32>().unwrap()
     }
 }
