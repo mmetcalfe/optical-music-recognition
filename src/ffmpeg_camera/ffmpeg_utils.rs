@@ -318,6 +318,7 @@ pub unsafe fn make_avframe(
     Ok(yuyv_frame)
 }
 
+// Based on: https://lists.libav.org/pipermail/libav-user/2010-August/005159.html
 pub unsafe fn save_frame_to_jpeg(src_frame : *mut ffmpeg_sys::AVFrame, save_fname : &str) -> Result<(), FfmpegError> {
     // let input_pixel_format = ffmpeg_sys::AV_PIX_FMT_UYVY422;
     let output_pixel_format = ffmpeg_sys::AV_PIX_FMT_YUVJ420P;

@@ -1,6 +1,7 @@
 use ffmpeg_camera::image_uyvy;
 use ffmpeg_camera::image_ycbcr;
 use ffmpeg_camera::image::Image;
+use ffmpeg_camera::ToTexture;
 use glium;
 use glium::Surface;
 use std::borrow::Cow;
@@ -132,46 +133,9 @@ impl<'a> ImagePane<'a> {
         ).unwrap();
     }
 
-    pub fn uyvy_image_to_texture(&self, image : &image_uyvy::Image) -> glium::texture::Texture2d {
-        let cow: Cow<[_]> = Cow::Borrowed(&image.data);
-        // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
-        let img_w = image.width as u32;
-        let img_h = image.height as u32;
-        let raw_image = glium::texture::RawImage2d {
-            data: cow,
-            width: img_w,
-            height: img_h,
-            format: glium::texture::ClientFormat::U8U8
-        };
-        let texture = glium::texture::Texture2d::new(self.display, raw_image).unwrap();
-
-        texture
-    }
-
-    pub fn ycbcr_image_to_texture(&self, image : &image_ycbcr::Image) -> glium::texture::Texture2d {
-        let cow: Cow<[_]> = Cow::Borrowed(&image.local_data);
-
-        // let data = image.to_byte_vector();
-        // let cow: Cow<[_]> = Cow::Borrowed(&data);
-
-        // let cow: Cow<[_]> = Cow::Borrowed(&image.data);
-        // let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
-        let img_w = image.width as u32;
-        let img_h = image.height as u32;
-        let raw_image = glium::texture::RawImage2d {
-            data: cow,
-            width: img_w,
-            height: img_h,
-            format: glium::texture::ClientFormat::U8U8U8U8
-        };
-        let texture = glium::texture::Texture2d::new(self.display, raw_image).unwrap();
-
-        texture
-    }
-
     pub fn convert_preprocess_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
         -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
-        let src_texture = self.uyvy_image_to_texture(uyvy_image);
+        let src_texture = uyvy_image.to_texture(&self.display);
 
         let processed = self.run_programs_on_texture(&src_texture, &[
             &self.uyuv_ycbcr_conversion_program,
@@ -183,7 +147,7 @@ impl<'a> ImagePane<'a> {
 
     pub fn convert_uyvy_ycbcr(&self, uyvy_image : &image_uyvy::Image)
         -> Result<image_ycbcr::Image, glium::framebuffer::ValidationError> {
-        let src_texture = self.uyvy_image_to_texture(uyvy_image);
+        let src_texture = uyvy_image.to_texture(&self.display);
 
         let dst_texture = glium::texture::Texture2d::empty_with_format(
             self.display,
@@ -250,29 +214,28 @@ impl<'a> ImagePane<'a> {
         }
     }
 
-    pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
-        let texture = self.uyvy_image_to_texture(image);
-
+    pub fn draw_image<I: Image + ToTexture>(&self, target : &mut glium::Frame, image : &I) {
+        let texture = image.to_texture(&self.display);
         self.draw_texture(target, &self.uyuv_ycbcr_conversion_program, texture)
     }
 
-    pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
-        let texture = self.ycbcr_image_to_texture(image);
+    // pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
+    //     let texture = image.to_texture(&self.display);
+    //
+    //     // let processed = self.run_programs_on_texture(&texture, &[
+    //     //     &self.adaptive_threshold_program
+    //     // ]).unwrap();
+    //
+    //     // self.draw_texture_flipped(target, &self.identity_program, processed)
+    //
+    //     self.draw_texture_flipped(target, &self.ycbcr_drawing_program, texture)
+    // }
 
-        // let processed = self.run_programs_on_texture(&texture, &[
-        //     &self.adaptive_threshold_program
-        // ]).unwrap();
-
-        // self.draw_texture_flipped(target, &self.identity_program, processed)
-
-        self.draw_texture_flipped(target, &self.ycbcr_drawing_program, texture)
-    }
-
-    pub fn draw_image_homog_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image,
+    pub fn draw_image_homog<I: Image + ToTexture>(&self, target : &mut glium::Frame, image : &I,
         reference_view: &na::Matrix4<f32>,
         reference_scale: &na::Matrix4<f32>,
         homog: &na::Matrix3<f32>) {
-        let texture = self.ycbcr_image_to_texture(image);
+        let texture = image.to_texture(&self.display);
 
         let tex_uniform = glium::uniforms::Sampler::new(&texture)
             .wrap_function(glium::uniforms::SamplerWrapFunction::Clamp);

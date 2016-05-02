@@ -6,6 +6,7 @@ use std::ffi::CString;
 
 use ffmpeg_camera::image_uyvy;
 use ffmpeg_camera::image_ycbcr;
+use ffmpeg_camera::image_nv12;
 use ffmpeg_camera::image;
 // use ffmpeg_camera::image::Image;
 
@@ -254,6 +255,10 @@ impl FfmpegCamera {
 
     pub fn get_image_uyvy(&mut self) -> Result<image_uyvy::Image, FfmpegError> {
         self.get_image::<image_uyvy::Image>(ffmpeg_sys::AV_PIX_FMT_UYVY422)
+    }
+
+    pub fn get_image_nv12(&mut self) -> Result<image_nv12::Image, FfmpegError> {
+        self.get_image::<image_nv12::Image>(ffmpeg_sys::AV_PIX_FMT_YUV420P)
     }
 
     // pub fn get_image_ycbcr(&mut self) -> Result<image_ycbcr::Image, FfmpegError> {

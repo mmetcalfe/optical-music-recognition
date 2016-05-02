@@ -9,7 +9,8 @@ use drawing::text_helper::TextHelper;
 
 use ffmpeg_camera::image_uyvy;
 use ffmpeg_camera::image_ycbcr;
-use ffmpeg_camera::image::Image;
+use ffmpeg_camera::Image;
+use ffmpeg_camera::ToTexture;
 use glium;
 use nalgebra as na;
 use nalgebra::Transpose;
@@ -194,22 +195,31 @@ impl<'a> DrawingFrame<'a> {
         self.ctx.borrow_mut().rectangle_buffer.draw_rectangle(target, rect, colour)
     }
 
-    pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
+    // pub fn draw_image_uyvy(&self, target : &mut glium::Frame, image : &image_uyvy::Image) {
+    //     self.set_view_matrices();
+    //     self.ctx.borrow_mut().image_pane.draw_image_uyvy(target, image)
+    // }
+
+    // pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
+    //     self.set_view_matrices();
+    //     self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
+    // }
+
+    pub fn draw_image<I: Image + ToTexture>(&self, target : &mut glium::Frame, image : &I) {
         self.set_view_matrices();
-        self.ctx.borrow_mut().image_pane.draw_image_uyvy(target, image)
+        self.ctx.borrow_mut().image_pane.draw_image(target, image)
     }
 
-    pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {
-        self.set_view_matrices();
-        self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
-    }
-
-    pub fn draw_image_homog_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image, reference: &Self, homog: &na::Matrix3<f32>) {
+    pub fn draw_image_homog<I: Image + ToTexture>(&self,
+        target : &mut glium::Frame,
+        image : &I,
+        reference: &Self,
+        homog: &na::Matrix3<f32>) {
         self.set_view_matrices();
         let reference_scale = na::Matrix4::<f32>::from(&reference.make_scale_transform());
         let view = reference.make_view_matrix();
         // self.ctx.borrow_mut().image_pane.draw_image_ycbcr(target, image)
-        self.ctx.borrow_mut().image_pane.draw_image_homog_ycbcr(
+        self.ctx.borrow_mut().image_pane.draw_image_homog(
             target,
             image,
             &view,

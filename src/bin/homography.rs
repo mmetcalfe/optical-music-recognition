@@ -235,7 +235,8 @@ fn main() {
 
     let mut frame_start_time = SteadyTime::now();
 
-    let mut captured_frame: Option<image_ycbcr::Image> = None;
+    // let mut captured_frame: Option<image_ycbcr::Image> = None;
+    let mut captured_frame = None;
     let mut captured_frame_features: Option<(af::Features, af::Array)> = None;
     let mut take_photo = false;
 
@@ -243,26 +244,34 @@ fn main() {
 
     loop {
     // {
-        // Get webcam frame:
-        let webcam_frame = camera.get_image_uyvy().unwrap();
-        // webcam_frame.save_jpeg("image_uyvy.jpg").unwrap();
-        let mut ycbcr_frame = conversion_frame.convert_uyvy_ycbcr(&webcam_frame).unwrap();
+        // // Get ycbcr frame:
+        // let uyvy_frame = camera.get_image_uyvy().unwrap();
+        // // uyvy_frame.save_jpeg("image_uyvy.jpg").unwrap();
+        // let mut webcam_frame = conversion_frame.convert_uyvy_ycbcr(&uyvy_frame).unwrap();
+
+        // Get nv12 frame:
+        let mut webcam_frame = camera.get_image_nv12().unwrap();
+
         // // Fake webcam frame:
-        // let ycbcr_frame = get_fake_webcam_frame();
+        // let webcam_frame = get_fake_webcam_frame();
+
 
         println!("save:");
-        ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
+        // webcam_frame.save_jpeg("image_ycbcr.jpg").unwrap();
+        webcam_frame.save_jpeg("image_nv12.jpg").unwrap();
 
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
-        video_frame.draw_image_ycbcr(&mut target, &ycbcr_frame);
+        video_frame.draw_image(&mut target, &webcam_frame);
+        // video_frame.draw_image_ycbcr(&mut target, &webcam_frame);
         if let Some(ref frame) = captured_frame {
-            photo_frame.draw_image_ycbcr(&mut target, &frame);
+            // photo_frame.draw_image_ycbcr(&mut target, &frame);
+            photo_frame.draw_image(&mut target, frame);
         }
 
         println!("greyscale:");
         // Obtain greyscale image:
-        let img_grey = ycbcr_frame.af_grey();
+        let img_grey = webcam_frame.af_grey();
 
         let mut processing_start_time = SteadyTime::now();
         let mut homog_start_time = SteadyTime::now();
@@ -297,12 +306,12 @@ fn main() {
             );
 
             if let Ok((orb_features, orb_descriptors)) = orb_result {
-                draw_orb_features(&mut target, &window_frame, &video_frame, &orb_features, &ycbcr_frame);
+                draw_orb_features(&mut target, &window_frame, &video_frame, &orb_features, &webcam_frame);
 
                 println!("ORB SUCCEDED: ");
 
                 if let Some((ref frame_features, ref frame_descriptors)) = captured_frame_features {
-                    draw_orb_features(&mut target, &window_frame, &photo_frame, &frame_features, &ycbcr_frame);
+                    draw_orb_features(&mut target, &window_frame, &photo_frame, &frame_features, &webcam_frame);
 
                     let num_current_features = orb_features.num_features().unwrap() as usize;
                     let num_frame_features = frame_features.num_features().unwrap() as usize;
@@ -430,8 +439,10 @@ fn main() {
                         println!("homog: {:?}", homog);
 
                         if let Some(ref frame) = captured_frame {
-                            homog_frame.draw_image_ycbcr(&mut target, &frame);
-                            homog_container.draw_image_homog_ycbcr(&mut target, &ycbcr_frame, &homog_frame, &homog);
+                            homog_frame.draw_image(&mut target, frame);
+                            homog_container.draw_image_homog(&mut target, &webcam_frame, &homog_frame, &homog);
+                            // homog_frame.draw_image_ycbcr(&mut target, &frame);
+                            // homog_container.draw_image_homog_ycbcr(&mut target, &webcam_frame, &homog_frame, &homog);
                         }
                     }
                 }
@@ -472,10 +483,10 @@ fn main() {
 
         if take_photo {
             println!("TAKE PHOTO!");
-            ycbcr_frame.save_jpeg("captured_frame.jpg").unwrap();
+            webcam_frame.save_jpeg("captured_frame.jpg").unwrap();
             take_photo = false;
 
-            captured_frame = Some(ycbcr_frame);
+            captured_frame = Some(webcam_frame);
             // continue;
         }
 
