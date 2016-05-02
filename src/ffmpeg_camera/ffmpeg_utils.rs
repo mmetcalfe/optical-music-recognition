@@ -112,6 +112,7 @@ pub fn av_pix_fmt_from_i32(pix_fmt: i32) -> ffmpeg_sys::AVPixelFormat {
     match pix_fmt {
         0 => ffmpeg_sys::AV_PIX_FMT_YUVJ420P,
         2 => ffmpeg_sys::AV_PIX_FMT_RGB24,
+        4 => ffmpeg_sys::AV_PIX_FMT_YUV422P,
         5 => ffmpeg_sys::AV_PIX_FMT_YUV444P,
         17 => ffmpeg_sys::AV_PIX_FMT_UYVY422,
         28 => ffmpeg_sys::AV_PIX_FMT_BGR32,
@@ -306,6 +307,12 @@ pub unsafe fn make_avframe(
 
     (*yuyv_frame).data[0] = data.as_ptr() as *mut u8;
     // (*yuyv_frame).data[0] = ((&data[0]) as *const u8) as *mut u8;
+
+    if pixel_format == ffmpeg_sys::AV_PIX_FMT_YUV420P {
+        let uv_plane_ptr = (*yuyv_frame).data[0].offset((width*height) as isize);
+        (*yuyv_frame).data[1] = uv_plane_ptr;
+        (*yuyv_frame).data[2] = uv_plane_ptr;
+    }
 
     // println!("(*yuyv_frame).data: {:?}", (*yuyv_frame).data);
     // println!("(*yuyv_frame).linesize: {:?}", (*yuyv_frame).linesize);

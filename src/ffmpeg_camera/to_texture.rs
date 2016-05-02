@@ -50,7 +50,8 @@ impl ToTexture for super::image_ycbcr::Image {
 
 impl ToTexture for super::image_nv12::Image {
     fn to_texture(&self, display: &glium::Display) -> glium::texture::Texture2d {
-        let cow: Cow<[_]> = Cow::Borrowed(&self.local_data);
+        let grey_bytes = self.width * self.height;
+        let cow: Cow<[_]> = Cow::Borrowed(&self.local_data[..grey_bytes]);
 
         let img_w = self.width as u32;
         let img_h = self.height as u32;

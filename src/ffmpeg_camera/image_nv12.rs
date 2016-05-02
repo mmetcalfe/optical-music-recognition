@@ -76,19 +76,20 @@ impl ffmpeg_camera::Image for Image {
         unsafe {
             // let mut data = self.to_byte_vector();
 
-            let mut yuyv422_frame = try!(
+            let mut av_frame = try!(
                 ffmpeg_utils::make_avframe(
                     self.width,
                     self.height,
                     // ffmpeg_sys::AV_PIX_FMT_BGR32,
                     ffmpeg_sys::AV_PIX_FMT_YUV420P,
+                    // ffmpeg_sys::AV_PIX_FMT_YUV422P,
                     // &self.data
                     // &data
                     &self.local_data
                 )
             );
-            try!(ffmpeg_utils::save_frame_to_jpeg(yuyv422_frame, save_fname));
-            ffmpeg_sys::av_frame_free(&mut yuyv422_frame);
+            try!(ffmpeg_utils::save_frame_to_jpeg(av_frame, save_fname));
+            ffmpeg_sys::av_frame_free(&mut av_frame);
         }
 
         Ok(())
