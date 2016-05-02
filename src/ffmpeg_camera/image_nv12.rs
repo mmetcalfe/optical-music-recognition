@@ -59,8 +59,8 @@ impl ffmpeg_camera::Image for Image {
         unsafe {
             Pixel {
                 y: *self.local_data.get_unchecked(y_i),
-                cb: 0, // *self.local_data.get_unchecked(cb_i),
-                cr: 0, // *self.local_data.get_unchecked(cr_i),
+                cb: 128, // *self.local_data.get_unchecked(cb_i),
+                cr: 128, // *self.local_data.get_unchecked(cr_i),
             }
         }
 

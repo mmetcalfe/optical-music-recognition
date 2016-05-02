@@ -216,7 +216,9 @@ impl<'a> ImagePane<'a> {
 
     pub fn draw_image<I: Image + ToTexture>(&self, target : &mut glium::Frame, image : &I) {
         let texture = image.to_texture(&self.display);
-        self.draw_texture(target, &self.uyuv_ycbcr_conversion_program, texture)
+        // // Only for uyvy:
+        // self.draw_texture(target, &self.uyuv_ycbcr_conversion_program, texture)
+        self.draw_texture(target, &self.ycbcr_drawing_program, texture)
     }
 
     // pub fn draw_image_ycbcr(&self, target : &mut glium::Frame, image : &image_ycbcr::Image) {

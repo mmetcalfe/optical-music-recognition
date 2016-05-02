@@ -3,6 +3,8 @@ use glium;
 use super::Image;
 use std::borrow::Cow;
 
+// Note: The format of the returned texture is currently unspecified, making this a poor
+// abstraction.
 pub trait ToTexture {
     fn to_texture(&self, display: &glium::Display) -> glium::texture::Texture2d;
 }

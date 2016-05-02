@@ -252,6 +252,8 @@ fn main() {
         // Get nv12 frame:
         let mut webcam_frame = camera.get_image_nv12().unwrap();
 
+        println!("webcam_frame: {}x{}", webcam_frame.width(), webcam_frame.height());
+
         // // Fake webcam frame:
         // let webcam_frame = get_fake_webcam_frame();
 
