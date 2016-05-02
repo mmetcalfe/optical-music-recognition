@@ -32,8 +32,8 @@ fn main() {
     //         .expect("Failed to open camera.");
 
 
-    let (img_w, img_h) = (320, 240);
-    // let (img_w, img_h) = (640, 480);
+    // let (img_w, img_h) = (320, 240);
+    let (img_w, img_h) = (640, 480);
     // let (img_w, img_h) = (1280, 720);
     // let (img_w, img_h) = (1920, 1080);
 
@@ -62,15 +62,15 @@ fn main() {
     let mut draw_ctx = RefCell::new(drawing::context::DrawingContext::new(&display));
     draw_ctx.borrow_mut().set_window_dims(window_dims);
     let mut draw_frame = drawing::context::DrawingContext::get_default_frame(&draw_ctx);
+    let mut conversion_frame = drawing::context::DrawingContext::get_conversion_frame(&draw_ctx);
     // draw_frame.set_view_matrices();
     draw_frame.rect = gm::RotatedRectangle {
         position: [0.0, 0.0],
         size: [2.0, 2.0],
         angle: 0.0,
     };
-    draw_frame.frame_dims = na::Vector2::<f32>::new(
-        img_w as f32, img_h as f32
-    );
+    draw_frame.frame_dims = na::Vector2::<f32>::new(img_w as f32, img_h as f32);
+    draw_frame.frame_centre = na::Vector2::<f32>::new(-1.0, -1.0);
 
 
     // let img_pane = drawing::image_pane::ImagePane::new(&display);
@@ -79,25 +79,26 @@ fn main() {
     let mut frame_start_time = SteadyTime::now();
     loop {
 
-        let webcam_frame = camera.get_image_uyvy().unwrap();
+        let webcam_frame = camera.get_image_nv12().unwrap();
+        // let webcam_frame = camera.get_image_uyvy().unwrap();
+        // let mut webcam_frame = conversion_frame.convert_uyvy_ycbcr(&webcam_frame).unwrap();
         // let webcam_frame = camera.get_image_ycbcr().unwrap();
 
         // webcam_frame.save_pgm("image.pgm").unwrap();
         // webcam_frame.save_jpeg("image_yuv422.jpg").unwrap();
 
-        let mut ycbcr_frame = draw_ctx.borrow_mut().convert_preprocess_uyvy_ycbcr(&webcam_frame).unwrap();
 
-        // ycbcr_frame.save_jpeg("image_ycbcr.jpg").unwrap();
+        // webcam_frame.save_jpeg("image_ycbcr.jpg").unwrap();
 
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        // ycbcr_frame.width = 50;
-        // ycbcr_frame.height = 50;
-        // ycbcr_frame.local_data.resize(50*50*4, 0);
+        // webcam_frame.width = 50;
+        // webcam_frame.height = 50;
+        // webcam_frame.local_data.resize(50*50*4, 0);
 
         // draw_frame.draw_image_uyvy(&mut target, &webcam_frame);
-        draw_frame.draw_image_ycbcr(&mut target, &ycbcr_frame);
+        draw_frame.draw_image(&mut target, &webcam_frame);
 
         let staff_cross_col = [0.6, 0.2, 0.0, 1.0];
 
@@ -106,27 +107,27 @@ fn main() {
         // Scan entire image for StaffCross points:
         // let num_scan_lines = std::cmp::min(640, img_w / 2);
         let num_scan_lines = 320;
-        let cross_points = omr::detection::scanning::staff_cross::scan_entire_image(&ycbcr_frame, num_scan_lines);
+        let cross_points = omr::detection::scanning::staff_cross::scan_entire_image(&webcam_frame, num_scan_lines);
 
         // Draw detected StaffCross points:
         // for cross in &cross_points {
-        //     draw_frame.draw_staff_cross(&mut target, &ycbcr_frame, &cross, staff_cross_col);
+        //     draw_frame.draw_staff_cross(&mut target, &webcam_frame, &cross, staff_cross_col);
         // }
-        draw_frame.draw_staff_crosses(&mut target, &ycbcr_frame, &cross_points, staff_cross_col);
+        draw_frame.draw_staff_crosses(&mut target, &webcam_frame, &cross_points, staff_cross_col);
 
 
         // // Draw segments:
-        // let segments = omr::detection::scanning::segment::scan_entire_image(&ycbcr_frame, num_scan_lines);
+        // let segments = omr::detection::scanning::segment::scan_entire_image(&webcam_frame, num_scan_lines);
         // let x = 256;
         // for segment in segments.iter() {
         //     // let col = [(i*71 % 255) as f32 / 255.0, 0.5 * (i*333 % 255) as f32 / 255.0, 0.0, 0.0];
         //     let col = [1.0, 0.0, 0.0, 1.0];
         //     let x = segment.x;
         //
-        //     // let pix_h = 2.0 * (1.0 / ycbcr_frame.width as f32);
-        //     let pix_h = 1.0; // 2.0 * (1.0 / ycbcr_frame.height as f32);
-        //     let mut p1 = ycbcr_frame.opengl_coords_for_index([x, segment.y_min]);
-        //     let mut p2 = ycbcr_frame.opengl_coords_for_index([x, segment.y_max]);
+        //     // let pix_h = 2.0 * (1.0 / webcam_frame.width as f32);
+        //     let pix_h = 1.0; // 2.0 * (1.0 / webcam_frame.height as f32);
+        //     let mut p1 = webcam_frame.opengl_coords_for_index([x, segment.y_min]);
+        //     let mut p2 = webcam_frame.opengl_coords_for_index([x, segment.y_max]);
         //
         //     // Draw from the top of the first pixel to the bottom of the second:
         //     if p2[1] < p1[1] {
@@ -158,19 +159,19 @@ fn main() {
         };
         // let maybe_line = omr::detection::ransac::ransac::<StaffCrossLineModel,_,_>(params, &cross_points);
         // let state = omr::detection::ransac::ransac::<StaffCrossLineModel,_,_>(&params, &cross_points);
-        // draw_frame.draw_ransac_state(&mut target, &ycbcr_frame, &state);
+        // draw_frame.draw_ransac_state(&mut target, &webcam_frame, &state);
 
         let states = omr::detection::ransac::ransac_multiple::<StaffCrossLineModel,_,_>(&params, &cross_points);
         for state in &states {
-            // draw_frame.draw_ransac_state(&mut target, &ycbcr_frame, &state);
+            // draw_frame.draw_ransac_state(&mut target, &webcam_frame, &state);
 
             let centres : Vec<na::Vector2<f32>> = state.inliers.iter()
                 // .take(5)
                 .map(|c| c.centre()).collect();
 
             let best_line = math::fit_line(&centres);
-            let p1 = ycbcr_frame.opengl_coords_for_point(best_line.a);
-            let p2 = ycbcr_frame.opengl_coords_for_point(best_line.b);
+            let p1 = webcam_frame.opengl_coords_for_point(best_line.a);
+            let p2 = webcam_frame.opengl_coords_for_point(best_line.b);
             // draw_frame.draw_line_extended(&mut target, p1, p2, 3.0, [0.3, 0.3, 0.1, 1.0]);
 
             let mut is_staff = false;
@@ -181,9 +182,9 @@ fn main() {
                 // best_line
                 let inliers = &state.inliers;
 
-                let (t_min, t_max) = best_line.screen_entry_exit_times(ycbcr_frame.width as f32, ycbcr_frame.height as f32);
-                // let p_min = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_min));
-                // let p_max = ycbcr_frame.opengl_coords_for_point(best_line.point_at_time(t_max));
+                let (t_min, t_max) = best_line.screen_entry_exit_times(webcam_frame.width as f32, webcam_frame.height as f32);
+                // let p_min = webcam_frame.opengl_coords_for_point(best_line.point_at_time(t_min));
+                // let p_max = webcam_frame.opengl_coords_for_point(best_line.point_at_time(t_max));
                 // draw_frame.draw_line(&mut target, p_min, p_min*0.9+p_max*0.1, 10.0, [1.0, 1.0, 0.5, 1.0]);
                 // draw_frame.draw_line(&mut target, p_max, p_min*0.1+p_max*0.9, 10.0, [1.0, 1.0, 0.5, 1.0]);
 
@@ -211,10 +212,10 @@ fn main() {
                     // Sample lines:
                     let mut line_avg = 0.0;
                     for pt in staff.perpendicular_samples(t, 5, line_sep) {
-                        let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
+                        let brightness = webcam_frame.sample_point(pt).y as f32 / 255.0;
                         line_avg += brightness.round();
 
-                        let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
+                        let draw_pt = webcam_frame.opengl_coords_for_point(pt);
 
                         let colour = if brightness > 0.5 {[0.0, 0.5, 0.0, 1.0]} else {[0.0, 0.0, 0.5, 1.0]};
                         // draw_frame.draw_point(&mut target, draw_pt, 1.0, colour);
@@ -224,10 +225,10 @@ fn main() {
                     // Sample spaces:
                     let mut space_avg = 0.0;
                     for pt in staff.perpendicular_samples(t, 4, line_sep) {
-                        let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
+                        let brightness = webcam_frame.sample_point(pt).y as f32 / 255.0;
                         space_avg += brightness.round();
 
-                        let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
+                        let draw_pt = webcam_frame.opengl_coords_for_point(pt);
                         // draw_frame.draw_point(&mut target, draw_pt, 1.0, [0.8, 0.0, 1.0, 1.0]);
                     }
                     space_avg /= 4.0;
@@ -237,9 +238,9 @@ fn main() {
                     let sample_sep = 1.2 * line_sep * 2.0 / (num_samples as f32 * 0.5);
                     let mut blank_avg = 0.0;
                     for pt in staff.perpendicular_samples(t, num_samples, sample_sep) {
-                        let brightness = ycbcr_frame.sample_point(pt).y as f32 / 255.0;
+                        let brightness = webcam_frame.sample_point(pt).y as f32 / 255.0;
                         blank_avg += brightness.round();
-                        let draw_pt = ycbcr_frame.opengl_coords_for_point(pt);
+                        let draw_pt = webcam_frame.opengl_coords_for_point(pt);
                         // draw_frame.draw_point(&mut target, draw_pt, 1.0, [0.2, 0.2, 0.2, 1.0]);
                     }
                     blank_avg /= num_samples as f32;
@@ -247,8 +248,8 @@ fn main() {
                     let class = omr::detection::refinement::classify_staff_sample(line_avg, space_avg, blank_avg);
 
                     let p_t = best_line.point_at_time(t);
-                    let draw_pt1 = ycbcr_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
-                    let draw_pt2 = ycbcr_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
+                    let draw_pt1 = webcam_frame.opengl_coords_for_point(p_t+normal*line_sep*2.0);
+                    let draw_pt2 = webcam_frame.opengl_coords_for_point(p_t-normal*line_sep*2.0);
 
                     if class == omr::detection::refinement::StaffEvidenceClass::Blank {
                         // draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
@@ -270,26 +271,26 @@ fn main() {
                     // }
                 }
 
-                let (candidate_segments, blank_segments) = omr::detection::refinement::partition_staff(&ycbcr_frame, &staff);
+                let (candidate_segments, blank_segments) = omr::detection::refinement::partition_staff(&webcam_frame, &staff);
                 for part in &candidate_segments {
                     let staff_pt1 = part.point_at_time(0.0);
                     let staff_pt2 = part.point_at_time(part.length);
-                    let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
-                    let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
+                    let draw_pt1 = webcam_frame.opengl_coords_for_point(staff_pt1);
+                    let draw_pt2 = webcam_frame.opengl_coords_for_point(staff_pt2);
                     draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [1.0, 1.0, 1.0, 1.0]);
                 }
                 for part in blank_segments {
                     let staff_pt1 = part.point_at_time(0.0);
                     let staff_pt2 = part.point_at_time(part.length);
-                    let draw_pt1 = ycbcr_frame.opengl_coords_for_point(staff_pt1);
-                    let draw_pt2 = ycbcr_frame.opengl_coords_for_point(staff_pt2);
+                    let draw_pt1 = webcam_frame.opengl_coords_for_point(staff_pt1);
+                    let draw_pt2 = webcam_frame.opengl_coords_for_point(staff_pt2);
                     draw_frame.draw_line(&mut target, draw_pt1, draw_pt2, 1.0, [0.0, 0.0, 0.0, 1.0]);
                 }
 
                 let staff_segments = candidate_segments.iter()
-                    .filter(|segment| omr::detection::refinement::staff_segment_is_valid(&ycbcr_frame, &segment));
+                    .filter(|segment| omr::detection::refinement::staff_segment_is_valid(&webcam_frame, &segment));
                 for segment in staff_segments {
-                    draw_frame.draw_staff_in_image(&mut target, &ycbcr_frame, &segment, [0.8, 0.3, 1.0, 1.0]);
+                    draw_frame.draw_staff_in_image(&mut target, &webcam_frame, &segment, [0.8, 0.3, 1.0, 1.0]);
                 }
             }
         }

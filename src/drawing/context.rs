@@ -282,7 +282,7 @@ impl<'a> DrawingFrame<'a> {
         // self.draw_lines(target, &lines, lw, colour);
     }
 
-    pub fn draw_staff_in_image(&self, target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, staff: &gm::staff::Staff, colour: [f32; 4]) {
+    pub fn draw_staff_in_image<I: Image>(&self, target: &mut glium::Frame, ycbcr_frame : &I, staff: &gm::staff::Staff, colour: [f32; 4]) {
         self.set_view_matrices();
         let start_pt = staff.point_at_time(0.0);
         let end_pt = staff.point_at_time(staff.length);
@@ -322,7 +322,7 @@ impl<'a> DrawingFrame<'a> {
         }
     }
 
-    pub fn draw_staff_crosses(&self, mut target: &mut glium::Frame, ycbcr_frame : &image_ycbcr::Image, crosses: &[StaffCross], colour: [f32; 4]) {
+    pub fn draw_staff_crosses<I: Image>(&self, mut target: &mut glium::Frame, ycbcr_frame : &I, crosses: &[StaffCross], colour: [f32; 4]) {
         self.set_view_matrices();
         let pix_h = 1.0;
         let lw = 1.0;
@@ -351,10 +351,10 @@ impl<'a> DrawingFrame<'a> {
         self.draw_lines(target, &lines, lw, colour);
     }
 
-    pub fn draw_ransac_state(
+    pub fn draw_ransac_state<I: Image>(
         &self,
         mut target: &mut glium::Frame,
-        ycbcr_frame : &image_ycbcr::Image,
+        ycbcr_frame : &I,
         state: &RansacState<StaffCrossLine, StaffCross>) {
             self.set_view_matrices();
 
@@ -366,7 +366,7 @@ impl<'a> DrawingFrame<'a> {
             // for cross in state.inliers.iter() {
             //     self.draw_staff_cross(&mut target, &ycbcr_frame, &cross, inliers_col);
             // }
-            self.draw_staff_crosses(&mut target, &ycbcr_frame, &state.inliers, inliers_col);
+            self.draw_staff_crosses(&mut target, ycbcr_frame, &state.inliers, inliers_col);
 
             // Draw staff lines:
             let mut space_width_sum = 0.0;
